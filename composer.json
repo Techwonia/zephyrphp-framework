@@ -1,0 +1,60 @@
+{
+    "name": "zephyrphp/framework",
+    "description": "ZephyrPHP - A lightweight, fast & secure PHP framework. Light as a breeze, fast as the wind.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "framework",
+        "php",
+        "mvc",
+        "lightweight",
+        "fast",
+        "secure",
+        "zephyr",
+        "zephyrphp"
+    ],
+    "homepage": "https://github.com/Techwonia/zephyrphp-framework",
+    "authors": [
+        {
+            "name": "Techwonia",
+            "email": "opensource@techwonia.com",
+            "homepage": "https://techwonia.com"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/Techwonia/zephyrphp-framework/issues",
+        "source": "https://github.com/Techwonia/zephyrphp-framework",
+        "docs": "https://zephyrphp.com/docs"
+    },
+    "require": {
+        "php": ">=8.2",
+        "twig/twig": "^3.17",
+        "php-di/php-di": "^7.0",
+        "vlucas/phpdotenv": "^5.6",
+        "psr/log": "^3.0",
+        "symfony/console": "^6.0|^7.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.5",
+        "phpstan/phpstan": "^2.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "ZephyrPHP\\": "src/ZephyrPHP/"
+        },
+        "files": [
+            "src/ZephyrPHP/Support/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ZephyrPHP\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}
