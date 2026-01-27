@@ -68,7 +68,22 @@ class DbSchemaCommand extends BaseCommand
             }
 
             $this->line('');
-            if (!$this->confirm('Update database schema?', true)) {
+
+            // Get the SQL that would be executed
+            $sqls = $schemaTool->getUpdateSchemaSql($metadata);
+
+            if (empty($sqls)) {
+                $this->info('Schema is already up to date.');
+                return self::SUCCESS;
+            }
+
+            $this->section('SQL to execute:');
+            foreach ($sqls as $sql) {
+                $this->line("  " . $sql);
+            }
+            $this->line('');
+
+            if (!$this->confirm('Execute these SQL statements?', true)) {
                 $this->line('Aborted.');
                 return self::SUCCESS;
             }
@@ -76,7 +91,7 @@ class DbSchemaCommand extends BaseCommand
             // Update schema
             $schemaTool->updateSchema($metadata);
 
-            $this->success('Database schema updated successfully!');
+            $this->success('Database schema updated successfully! (' . count($sqls) . ' statements executed)');
             return self::SUCCESS;
         } catch (\Exception $e) {
             $this->error('Schema update failed: ' . $e->getMessage());
