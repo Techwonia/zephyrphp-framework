@@ -6,6 +6,7 @@ namespace ZephyrPHP\Console\Commands;
 
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(
@@ -14,6 +15,11 @@ use Symfony\Component\Console\Output\OutputInterface;
 )]
 class DbSchemaCommand extends BaseCommand
 {
+    protected function configure(): void
+    {
+        $this->addOption('force', 'f', InputOption::VALUE_NONE, 'Drop and recreate all tables (WARNING: destroys data)');
+    }
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->initialize($input, $output);
@@ -69,11 +75,48 @@ class DbSchemaCommand extends BaseCommand
 
             $this->line('');
 
+            $force = $input->getOption('force');
+
+            if ($force) {
+                // Force mode: drop and recreate all tables
+                $this->warning('FORCE MODE: This will DROP all tables and recreate them!');
+                $this->warning('All data will be LOST!');
+                $this->line('');
+
+                if (!$this->confirm('Are you sure you want to continue?', false)) {
+                    $this->line('Aborted.');
+                    return self::SUCCESS;
+                }
+
+                // Get drop SQL
+                $dropSqls = $schemaTool->getDropSchemaSQL($metadata);
+                $createSqls = $schemaTool->getCreateSchemaSql($metadata);
+
+                $this->section('SQL to execute:');
+                foreach ($dropSqls as $sql) {
+                    $this->line("  " . $sql);
+                }
+                foreach ($createSqls as $sql) {
+                    $this->line("  " . $sql);
+                }
+                $this->line('');
+
+                // Drop and recreate
+                $schemaTool->dropSchema($metadata);
+                $schemaTool->createSchema($metadata);
+
+                $this->success('Database schema recreated successfully!');
+                return self::SUCCESS;
+            }
+
+            // Normal mode: update schema
             // Get the SQL that would be executed
             $sqls = $schemaTool->getUpdateSchemaSql($metadata);
 
             if (empty($sqls)) {
                 $this->info('Schema is already up to date.');
+                $this->line('');
+                $this->line('Tip: Use --force to drop and recreate tables with all constraints.');
                 return self::SUCCESS;
             }
 
@@ -116,7 +159,11 @@ class DbSchemaCommand extends BaseCommand
 
     private function createEntityManager(string $modelsDir): \Doctrine\ORM\EntityManager
     {
-        $driver = $_ENV['DB_DRIVER'] ?? 'mysql';
+        // Support both DB_DRIVER and DB_CONNECTION env vars
+        $driver = $_ENV['DB_CONNECTION'] ?? $_ENV['DB_DRIVER'] ?? 'pdo_mysql';
+
+        // Normalize driver name (remove pdo_ prefix if present, we'll add it back)
+        $driver = str_replace('pdo_', '', $driver);
 
         if ($driver === 'sqlite') {
             $dbPath = $this->basePath($_ENV['DB_DATABASE'] ?? 'database/database.sqlite');
