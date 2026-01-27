@@ -92,6 +92,22 @@ class Handler
         $exceptionClass = get_class($e);
         $errorMessage = $this->getFullExceptionMessage($e);
 
+        // DEBUG: Write actual exception to file for analysis
+        $debugFile = dirname(__DIR__, 5) . '/storage/logs/db-exception-debug.log';
+        $debugContent = "[" . date('Y-m-d H:i:s') . "]\n";
+        $debugContent .= "Class: {$exceptionClass}\n";
+        $debugContent .= "Message: {$e->getMessage()}\n";
+        $debugContent .= "Full Chain: {$errorMessage}\n";
+        $prev = $e->getPrevious();
+        $i = 1;
+        while ($prev) {
+            $debugContent .= "Previous {$i}: " . get_class($prev) . " - " . $prev->getMessage() . "\n";
+            $prev = $prev->getPrevious();
+            $i++;
+        }
+        $debugContent .= "---\n";
+        @file_put_contents($debugFile, $debugContent, FILE_APPEND);
+
         // Get configured messages for database exceptions
         $dbMessages = $this->exceptionMessages['database'] ?? [];
         $fieldMessages = $this->exceptionMessages['fields'] ?? [];
@@ -236,6 +252,25 @@ class Handler
             return $field;
         }
 
+        // Pattern 1b: MySQL with backticks - for key `tablename`.`fieldname`
+        if (preg_match("/for key `([^`]+)`\.`([^`]+)`/i", $message, $matches)) {
+            $field = $matches[2];
+            if ($this->debug && $this->logPath) {
+                $this->logDebug("Pattern 1b matched: table={$matches[1]}, field={$field}");
+            }
+            return $field;
+        }
+
+        // Pattern 1c: MySQL constraint name format - for key 'IDX_xxx' or 'UNIQ_xxx'
+        // Try to extract from column list in the same message
+        if (preg_match("/column '([a-zA-Z_]+)'/i", $message, $matches)) {
+            $field = $matches[1];
+            if ($this->debug && $this->logPath) {
+                $this->logDebug("Pattern 1c matched: field={$field}");
+            }
+            return $field;
+        }
+
         // Pattern 2: MySQL - "for key 'tablename_fieldname_unique'"
         // Example: for key 'users_email_unique'
         if (preg_match("/for key '([a-z]+)_([a-zA-Z_]+)_(?:unique|UNIQUE|idx|key)'/i", $message, $matches)) {
@@ -246,16 +281,65 @@ class Handler
             return $field;
         }
 
+        // Pattern 2b: Doctrine auto-generated index names like 'UNIQ_1483A5E9E7927C74'
+        // When we see this pattern, try to guess the field from the duplicate value
+        if (preg_match("/for key '(UNIQ|IDX)_[A-F0-9]+'/i", $message)) {
+            // Extract the duplicate value
+            if (preg_match("/Duplicate entry '([^']+)'/i", $message, $valueMatch)) {
+                $duplicateValue = $valueMatch[1];
+
+                // If value looks like an email, it's the email field
+                if (filter_var($duplicateValue, FILTER_VALIDATE_EMAIL)) {
+                    if ($this->debug && $this->logPath) {
+                        $this->logDebug("Pattern 2b matched: detected email value '{$duplicateValue}'");
+                    }
+                    return 'email';
+                }
+
+                // If value looks like a phone number (digits, spaces, dashes, plus)
+                if (preg_match('/^[\d\s\-\+\(\)]{7,20}$/', $duplicateValue)) {
+                    if ($this->debug && $this->logPath) {
+                        $this->logDebug("Pattern 2b matched: detected phone value '{$duplicateValue}'");
+                    }
+                    return 'phone';
+                }
+
+                // If value looks like a username (alphanumeric, underscores, no spaces)
+                if (preg_match('/^[a-zA-Z][a-zA-Z0-9_]{2,30}$/', $duplicateValue) && !str_contains($duplicateValue, '@')) {
+                    if ($this->debug && $this->logPath) {
+                        $this->logDebug("Pattern 2b matched: detected username value '{$duplicateValue}'");
+                    }
+                    return 'username';
+                }
+
+                // If value looks like a slug (lowercase, hyphens)
+                if (preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $duplicateValue)) {
+                    if ($this->debug && $this->logPath) {
+                        $this->logDebug("Pattern 2b matched: detected slug value '{$duplicateValue}'");
+                    }
+                    return 'slug';
+                }
+            }
+        }
+
         // Pattern 3: Simple key name - "for key 'fieldname'" or "for key 'PRIMARY'"
-        if (preg_match("/for key '([a-zA-Z_]+)'/i", $message, $matches)) {
+        if (preg_match("/for key '([a-zA-Z_][a-zA-Z0-9_]*)'/i", $message, $matches)) {
             $key = $matches[1];
             if (strtoupper($key) === 'PRIMARY') {
                 return null;
             }
-            if ($this->debug && $this->logPath) {
-                $this->logDebug("Pattern 3 matched: key={$key}");
+            // Skip Doctrine auto-generated index names like UNIQ_xxx, IDX_xxx, FK_xxx
+            if (preg_match('/^(UNIQ|IDX|FK)_[A-F0-9]+$/i', $key)) {
+                if ($this->debug && $this->logPath) {
+                    $this->logDebug("Pattern 3 skipped auto-generated key: {$key}");
+                }
+                // Already handled by Pattern 2b above
+            } else {
+                if ($this->debug && $this->logPath) {
+                    $this->logDebug("Pattern 3 matched: key={$key}");
+                }
+                return $key;
             }
-            return $key;
         }
 
         // Pattern 4: PostgreSQL - "unique constraint "tablename_fieldname_key""
