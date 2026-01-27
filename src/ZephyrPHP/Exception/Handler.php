@@ -125,6 +125,21 @@ class Handler
         } elseif (str_contains($exceptionClass, 'LockWaitTimeoutException')) {
             $message = $dbMessages['lock_timeout'] ?? 'The operation timed out. Please try again.';
             $statusCode = 503;
+        } elseif (str_contains($exceptionClass, 'InvalidFieldNameException')) {
+            $message = $dbMessages['invalid_field'] ?? 'An error occurred while processing your request.';
+            $statusCode = 500;
+        } elseif (str_contains($exceptionClass, 'NonUniqueFieldNameException')) {
+            $message = $dbMessages['ambiguous_field'] ?? 'An error occurred while processing your request.';
+            $statusCode = 500;
+        } elseif ($this->isDataTypeMismatchError($errorMessage)) {
+            $field = $this->extractFieldFromDataTypeError($errorMessage);
+            $message = $this->getFieldMessage($field, 'data_type', $fieldMessages, $dbMessages);
+        } elseif ($this->isDataTruncationError($errorMessage)) {
+            $field = $this->extractFieldFromTruncationError($errorMessage);
+            $message = $this->getFieldMessage($field, 'truncation', $fieldMessages, $dbMessages);
+        } elseif ($this->isCheckConstraintError($exceptionClass, $errorMessage)) {
+            $field = $this->extractFieldFromCheckConstraintError($errorMessage);
+            $message = $this->getFieldMessage($field, 'check_constraint', $fieldMessages, $dbMessages);
         }
 
         if ($message !== null) {
@@ -169,6 +184,15 @@ class Handler
             'foreign_key' => $field
                 ? "Invalid {$this->formatFieldLabel($field)}. The referenced record does not exist."
                 : 'Invalid reference. The related record does not exist or cannot be deleted.',
+            'data_type' => $field
+                ? "The {$this->formatFieldLabel($field)} has an invalid format."
+                : 'One or more fields have invalid data types.',
+            'truncation' => $field
+                ? "The {$this->formatFieldLabel($field)} value is too long."
+                : 'One or more values exceed the maximum allowed length.',
+            'check_constraint' => $field
+                ? "The {$this->formatFieldLabel($field)} value does not meet the required constraints."
+                : 'One or more values do not meet the required constraints.',
         ];
 
         return $defaults[$type] ?? 'A database error occurred.';
@@ -374,23 +398,204 @@ class Handler
 
     /**
      * Extract field name from foreign key constraint violation error
+     *
+     * Supports multiple naming conventions:
+     * 1. Named FK constraints: 'tablename_fieldname_fk' (recommended, industry standard)
+     * 2. MySQL standard: FOREIGN KEY (`column`)
+     * 3. PostgreSQL: Key (column)=(value)
      */
     private function extractFieldFromForeignKeyError(string $message): ?string
     {
-        // MySQL: Cannot add or update a child row: a foreign key constraint fails
-        // (`db`.`table`, CONSTRAINT `fk_name` FOREIGN KEY (`column`) REFERENCES ...)
+        // Log the actual message for debugging
+        if ($this->debug && $this->logPath) {
+            $this->logDebug("Parsing foreign key error: " . $message);
+        }
+
+        // Pattern 1: Named FK constraint format (RECOMMENDED - industry standard)
+        // Format: CONSTRAINT `tablename_fieldname_fk` or 'tablename_fieldname_fk'
+        // Example: CONSTRAINT `orders_user_id_fk` FOREIGN KEY
+        if (preg_match("/CONSTRAINT [`'\"]?([a-z_]+)_([a-zA-Z_]+)_fk[`'\"]?/i", $message, $matches)) {
+            $field = $matches[2];
+            if ($this->debug && $this->logPath) {
+                $this->logDebug("Pattern 1 (named FK constraint) matched: field={$field}");
+            }
+            return $field;
+        }
+
+        // Pattern 2: MySQL standard - FOREIGN KEY (`column`) REFERENCES
+        // Example: FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
         if (preg_match('/FOREIGN KEY \(`([a-zA-Z_]+)`\)/i', $message, $matches)) {
+            if ($this->debug && $this->logPath) {
+                $this->logDebug("Pattern 2 (MySQL FK) matched: field={$matches[1]}");
+            }
             return $matches[1];
         }
 
-        // PostgreSQL: insert or update on table "table" violates foreign key constraint
-        // Key (column)=(value) is not present in table
+        // Pattern 3: PostgreSQL - Key (column)=(value) is not present
+        // Example: Key (user_id)=(999) is not present in table "users"
         if (preg_match('/Key \(([a-zA-Z_]+)\)=/i', $message, $matches)) {
+            if ($this->debug && $this->logPath) {
+                $this->logDebug("Pattern 3 (PostgreSQL Key) matched: field={$matches[1]}");
+            }
+            return $matches[1];
+        }
+
+        // Pattern 4: PostgreSQL - foreign key constraint "constraint_name"
+        if (preg_match('/foreign key constraint "[a-z_]+_([a-zA-Z_]+)_fk"/i', $message, $matches)) {
+            if ($this->debug && $this->logPath) {
+                $this->logDebug("Pattern 4 (PostgreSQL named FK) matched: field={$matches[1]}");
+            }
             return $matches[1];
         }
 
         // SQLite: FOREIGN KEY constraint failed
         // SQLite doesn't provide column name in error, return null
+
+        if ($this->debug && $this->logPath) {
+            $this->logDebug("No FK pattern matched for message");
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if error is a data type mismatch
+     */
+    private function isDataTypeMismatchError(string $message): bool
+    {
+        $patterns = [
+            '/Incorrect (integer|datetime|date|decimal|float|double) value/i',
+            '/Data truncated for column/i',
+            '/Out of range value/i',
+            '/invalid input syntax for/i', // PostgreSQL
+            '/cannot be cast to/i', // PostgreSQL
+            '/datatype mismatch/i', // SQLite
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $message)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Extract field name from data type mismatch error
+     */
+    private function extractFieldFromDataTypeError(string $message): ?string
+    {
+        // MySQL: Incorrect integer value: 'abc' for column 'age'
+        if (preg_match("/for column '([a-zA-Z_]+)'/i", $message, $matches)) {
+            return $matches[1];
+        }
+
+        // MySQL: Data truncated for column 'status' at row 1
+        if (preg_match("/for column '([a-zA-Z_]+)'/i", $message, $matches)) {
+            return $matches[1];
+        }
+
+        // MySQL: Out of range value for column 'quantity'
+        if (preg_match("/for column '([a-zA-Z_]+)'/i", $message, $matches)) {
+            return $matches[1];
+        }
+
+        // PostgreSQL: invalid input syntax for type integer: "abc"
+        // Note: PostgreSQL doesn't always include column name
+        if (preg_match('/column "([a-zA-Z_]+)"/i', $message, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if error is a data truncation error
+     */
+    private function isDataTruncationError(string $message): bool
+    {
+        $patterns = [
+            '/Data too long for column/i',
+            '/String data, right truncated/i', // ODBC/PostgreSQL
+            '/value too long for type/i', // PostgreSQL
+            '/TEXT fields can not have a default value/i',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $message)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Extract field name from truncation error
+     */
+    private function extractFieldFromTruncationError(string $message): ?string
+    {
+        // MySQL: Data too long for column 'description' at row 1
+        if (preg_match("/for column '([a-zA-Z_]+)'/i", $message, $matches)) {
+            return $matches[1];
+        }
+
+        // PostgreSQL: value too long for type character varying(100)
+        // Note: PostgreSQL doesn't include column name directly
+        if (preg_match('/column "([a-zA-Z_]+)"/i', $message, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if error is a check constraint violation
+     */
+    private function isCheckConstraintError(string $exceptionClass, string $message): bool
+    {
+        if (str_contains($exceptionClass, 'CheckConstraintViolationException')) {
+            return true;
+        }
+
+        $patterns = [
+            '/Check constraint .* is violated/i', // MySQL 8.0.16+
+            '/violates check constraint/i', // PostgreSQL
+            '/CHECK constraint failed/i', // SQLite
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $message)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Extract field name from check constraint error
+     *
+     * Named check constraints should follow format: tablename_fieldname_check
+     */
+    private function extractFieldFromCheckConstraintError(string $message): ?string
+    {
+        // Pattern 1: Named check constraint format (RECOMMENDED)
+        // Example: Check constraint 'orders_quantity_check' is violated
+        if (preg_match("/[`'\"]?[a-z_]+_([a-zA-Z_]+)_check[`'\"]?/i", $message, $matches)) {
+            return $matches[1];
+        }
+
+        // Pattern 2: PostgreSQL - violates check constraint "constraint_name"
+        if (preg_match('/check constraint "([a-z_]+)_([a-zA-Z_]+)_check"/i', $message, $matches)) {
+            return $matches[2];
+        }
+
+        // Pattern 3: SQLite - CHECK constraint failed: column_name
+        if (preg_match('/CHECK constraint failed: ([a-zA-Z_]+)/i', $message, $matches)) {
+            return $matches[1];
+        }
 
         return null;
     }
