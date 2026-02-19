@@ -841,21 +841,18 @@ class Asset
 
     /**
      * Get base URL for assets
+     *
+     * Returns empty string for local assets (relative paths work with CSP 'self').
+     * Only returns an absolute URL when base_url is explicitly configured.
      */
     private static function getBaseUrl(): string
     {
         if (self::$config['base_url'] !== null) {
-            return self::$config['base_url'];
+            return rtrim(self::$config['base_url'], '/');
         }
 
-        // Auto-detect from request
-        if (isset($_SERVER['HTTP_HOST'])) {
-            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-            return $protocol . '://' . $_SERVER['HTTP_HOST'];
-        }
-
-        // Fallback to env
-        return rtrim($_ENV['APP_URL'] ?? '', '/');
+        // Use relative paths by default — compatible with CSP 'self' directive
+        return '';
     }
 
     /**
