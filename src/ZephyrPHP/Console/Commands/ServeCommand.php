@@ -18,7 +18,7 @@ class ServeCommand extends BaseCommand
     protected function configure(): void
     {
         $this
-            ->addArgument('host', InputArgument::OPTIONAL, 'The host address', '127.0.0.1')
+            ->addArgument('host', InputArgument::OPTIONAL, 'The host address', 'localhost')
             ->addArgument('port', InputArgument::OPTIONAL, 'The port number', '8000');
     }
 
