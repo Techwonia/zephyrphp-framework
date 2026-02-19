@@ -37,6 +37,9 @@ class Installer
         if ($namespace !== 'App') {
             self::updateNamespace($projectDir, $namespace);
             $io->success("Namespace set to: {$namespace}");
+
+            // Regenerate autoloader with the new namespace
+            self::dumpAutoload($projectDir, $io);
         }
 
         // Generate APP_KEY
@@ -177,6 +180,18 @@ class Installer
                     file_put_contents($file->getPathname(), $content);
                 }
             }
+        }
+    }
+
+    private static function dumpAutoload(string $dir, $io): void
+    {
+        $prevDir = getcwd();
+        chdir($dir);
+        exec('composer dump-autoload --quiet 2>&1', $output, $exitCode);
+        chdir($prevDir);
+
+        if ($exitCode !== 0) {
+            $io->error('Could not regenerate autoloader. Run "composer dump-autoload" manually.');
         }
     }
 
