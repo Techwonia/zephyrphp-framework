@@ -931,6 +931,12 @@ HTML;
         $title = $this->getProductionTitle($statusCode);
         $message = $this->getProductionMessage($statusCode);
 
+        // Try user-defined error template first
+        if ($this->renderErrorTemplate($statusCode, $title, $message)) {
+            return;
+        }
+
+        // Fall back to built-in error page
         echo <<<HTML
 <!DOCTYPE html>
 <html lang="en">
@@ -959,6 +965,47 @@ HTML;
 </body>
 </html>
 HTML;
+    }
+
+    /**
+     * Try to render a user-defined error template (e.g., errors/404.twig)
+     */
+    protected function renderErrorTemplate(int $statusCode, string $title, string $message): bool
+    {
+        try {
+            $viewsPath = ($_ENV['VIEWS_PATH'] ?? '/pages');
+            $basePath = defined('BASE_PATH') ? BASE_PATH : getcwd();
+            $templateDir = $basePath . $viewsPath;
+
+            // Check for errors/{statusCode}.twig
+            $templateFile = $templateDir . '/errors/' . $statusCode . '.twig';
+            if (!file_exists($templateFile)) {
+                return false;
+            }
+
+            // Use the View system if available, otherwise render directly with Twig
+            if (function_exists('view')) {
+                echo view('errors/' . $statusCode, [
+                    'code' => $statusCode,
+                    'title' => $title,
+                    'message' => $message,
+                ]);
+                return true;
+            }
+
+            // Direct Twig rendering as fallback
+            $loader = new \Twig\Loader\FilesystemLoader($templateDir);
+            $twig = new \Twig\Environment($loader);
+            echo $twig->render('errors/' . $statusCode . '.twig', [
+                'code' => $statusCode,
+                'title' => $title,
+                'message' => $message,
+            ]);
+            return true;
+        } catch (\Throwable $templateError) {
+            // Template rendering failed, fall back to built-in page
+            return false;
+        }
     }
 
     protected function getCodeSnippet(string $file, int $line, int $padding = 8): string
