@@ -132,7 +132,7 @@ class Application
         $config = Config::get('assets', []);
 
         Asset::configure([
-            'base_url' => $_ENV['APP_URL'] ?? '',
+            'base_url' => $config['base_url'] ?? null,
             'base_path' => $config['public_path'] ?? (defined('PUBLIC_PATH') ? PUBLIC_PATH : null),
             'cdn_url' => $config['cdn_url'] ?? null,
             'cdn_enabled' => $config['cdn_enabled'] ?? true,
