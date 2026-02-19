@@ -175,26 +175,28 @@ class Headers
     {
         $nonce = self::$useNonces ? Nonce::forCsp() : '';
         $styleNonce = self::$useNonces ? Nonce::styleForCsp() : '';
+        $appOrigin = self::getAppUrlOrigin();
+        $appSrc = $appOrigin ? " {$appOrigin}" : '';
 
         $directives = [
-            'default-src' => "'self'" . self::getCustomSources('default-src'),
-            'script-src' => "'self' {$nonce}" . self::getCustomSources('script-src'),
-            'script-src-elem' => "'self' {$nonce}" . self::getCustomSources('script-src-elem'),
+            'default-src' => "'self'{$appSrc}" . self::getCustomSources('default-src'),
+            'script-src' => "'self'{$appSrc} {$nonce}" . self::getCustomSources('script-src'),
+            'script-src-elem' => "'self'{$appSrc} {$nonce}" . self::getCustomSources('script-src-elem'),
             'script-src-attr' => "'none'",
-            'style-src' => "'self' {$styleNonce} https://fonts.googleapis.com" . self::getCustomSources('style-src'),
-            'style-src-elem' => "'self' {$styleNonce} https://fonts.googleapis.com" . self::getCustomSources('style-src-elem'),
+            'style-src' => "'self'{$appSrc} {$styleNonce} https://fonts.googleapis.com" . self::getCustomSources('style-src'),
+            'style-src-elem' => "'self'{$appSrc} {$styleNonce} https://fonts.googleapis.com" . self::getCustomSources('style-src-elem'),
             'style-src-attr' => "'unsafe-inline'",
-            'img-src' => "'self' data: https:" . self::getCustomSources('img-src'),
-            'font-src' => "'self' https://fonts.gstatic.com data:" . self::getCustomSources('font-src'),
-            'connect-src' => "'self'" . self::getCustomSources('connect-src'),
-            'media-src' => "'self'" . self::getCustomSources('media-src'),
+            'img-src' => "'self'{$appSrc} data: https:" . self::getCustomSources('img-src'),
+            'font-src' => "'self'{$appSrc} https://fonts.gstatic.com data:" . self::getCustomSources('font-src'),
+            'connect-src' => "'self'{$appSrc}" . self::getCustomSources('connect-src'),
+            'media-src' => "'self'{$appSrc}" . self::getCustomSources('media-src'),
             'object-src' => "'none'",
-            'child-src' => "'self'" . self::getCustomSources('child-src'),
-            'frame-src' => "'self'" . self::getCustomSources('frame-src'),
-            'worker-src' => "'self' blob:" . self::getCustomSources('worker-src'),
-            'manifest-src' => "'self'" . self::getCustomSources('manifest-src'),
+            'child-src' => "'self'{$appSrc}" . self::getCustomSources('child-src'),
+            'frame-src' => "'self'{$appSrc}" . self::getCustomSources('frame-src'),
+            'worker-src' => "'self'{$appSrc} blob:" . self::getCustomSources('worker-src'),
+            'manifest-src' => "'self'{$appSrc}" . self::getCustomSources('manifest-src'),
             'base-uri' => "'self'",
-            'form-action' => "'self'" . self::getCustomSources('form-action'),
+            'form-action' => "'self'{$appSrc}" . self::getCustomSources('form-action'),
             'frame-ancestors' => "'self'",
             'upgrade-insecure-requests' => '',
             'block-all-mixed-content' => '',
@@ -203,10 +205,10 @@ class Headers
         // Apply CSP level adjustments
         if (self::$cspLevel === 'strict') {
             $directives['style-src-attr'] = "'none'";
-            $directives['script-src'] = "'self' 'strict-dynamic' {$nonce}" . self::getCustomSources('script-src');
+            $directives['script-src'] = "'self'{$appSrc} 'strict-dynamic' {$nonce}" . self::getCustomSources('script-src');
         } elseif (self::$cspLevel === 'relaxed') {
-            $directives['style-src'] = "'self' 'unsafe-inline' https://fonts.googleapis.com" . self::getCustomSources('style-src');
-            $directives['style-src-elem'] = "'self' 'unsafe-inline' https://fonts.googleapis.com" . self::getCustomSources('style-src-elem');
+            $directives['style-src'] = "'self'{$appSrc} 'unsafe-inline' https://fonts.googleapis.com" . self::getCustomSources('style-src');
+            $directives['style-src-elem'] = "'self'{$appSrc} 'unsafe-inline' https://fonts.googleapis.com" . self::getCustomSources('style-src-elem');
         }
 
         return self::buildCSP($directives);
@@ -218,20 +220,22 @@ class Headers
     private static function getDevelopmentCSP(): string
     {
         $nonce = self::$useNonces ? Nonce::forCsp() : '';
+        $appOrigin = self::getAppUrlOrigin();
+        $appSrc = $appOrigin ? " {$appOrigin}" : '';
 
         // Common CDN domains allowed by default
         $cdnDomains = 'https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com';
 
         $directives = [
-            'default-src' => "'self'" . self::getCustomSources('default-src'),
-            'script-src' => "'self' 'unsafe-inline' 'unsafe-eval' {$nonce} {$cdnDomains}" . self::getCustomSources('script-src'),
-            'style-src' => "'self' 'unsafe-inline' https://fonts.googleapis.com {$cdnDomains}" . self::getCustomSources('style-src'),
-            'style-src-elem' => "'self' 'unsafe-inline' https://fonts.googleapis.com {$cdnDomains}" . self::getCustomSources('style-src-elem'),
-            'img-src' => "'self' data: blob: https: http:" . self::getCustomSources('img-src'),
-            'font-src' => "'self' https://fonts.gstatic.com data: {$cdnDomains}" . self::getCustomSources('font-src'),
-            'connect-src' => "'self' ws: wss: http: https:" . self::getCustomSources('connect-src'),
+            'default-src' => "'self'{$appSrc}" . self::getCustomSources('default-src'),
+            'script-src' => "'self'{$appSrc} 'unsafe-inline' 'unsafe-eval' {$nonce} {$cdnDomains}" . self::getCustomSources('script-src'),
+            'style-src' => "'self'{$appSrc} 'unsafe-inline' https://fonts.googleapis.com {$cdnDomains}" . self::getCustomSources('style-src'),
+            'style-src-elem' => "'self'{$appSrc} 'unsafe-inline' https://fonts.googleapis.com {$cdnDomains}" . self::getCustomSources('style-src-elem'),
+            'img-src' => "'self'{$appSrc} data: blob: https: http:" . self::getCustomSources('img-src'),
+            'font-src' => "'self'{$appSrc} https://fonts.gstatic.com data: {$cdnDomains}" . self::getCustomSources('font-src'),
+            'connect-src' => "'self'{$appSrc} ws: wss: http: https:" . self::getCustomSources('connect-src'),
             'frame-ancestors' => "'self'",
-            'form-action' => "'self'" . self::getCustomSources('form-action'),
+            'form-action' => "'self'{$appSrc}" . self::getCustomSources('form-action'),
         ];
 
         return self::buildCSP($directives);
@@ -265,6 +269,32 @@ class Headers
 
         $sources = is_array($sources) ? $sources : [$sources];
         self::$cspDirectives[$directive] = array_merge(self::$cspDirectives[$directive], $sources);
+    }
+
+    /**
+     * Get the APP_URL origin for CSP whitelisting
+     *
+     * When APP_URL is configured, its origin is automatically added to CSP
+     * sources so that assets served with absolute URLs are not blocked.
+     */
+    private static function getAppUrlOrigin(): string
+    {
+        $appUrl = $_ENV['APP_URL'] ?? '';
+        if (empty($appUrl)) {
+            return '';
+        }
+
+        $parsed = parse_url($appUrl);
+        if (!$parsed || !isset($parsed['scheme'], $parsed['host'])) {
+            return '';
+        }
+
+        $origin = $parsed['scheme'] . '://' . $parsed['host'];
+        if (isset($parsed['port'])) {
+            $origin .= ':' . $parsed['port'];
+        }
+
+        return $origin;
     }
 
     /**
