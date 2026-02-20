@@ -164,20 +164,26 @@ class Installer
             );
         }
 
-        // Update PHP files in app/ recursively
-        if (is_dir($dir . '/app')) {
-            $iterator = new \RecursiveIteratorIterator(
-                new \RecursiveDirectoryIterator($dir . '/app', \RecursiveDirectoryIterator::SKIP_DOTS)
-            );
+        // Update PHP files in app/ and routes/ recursively
+        $dirsToUpdate = ['app', 'routes'];
 
-            foreach ($iterator as $file) {
-                if ($file->getExtension() === 'php') {
-                    $content = file_get_contents($file->getPathname());
-                    // Replace App namespace with new namespace
-                    $content = str_replace('namespace App\\', 'namespace ' . $namespace . '\\', $content);
-                    $content = str_replace('namespace App;', 'namespace ' . $namespace . ';', $content);
-                    $content = str_replace('use App\\', 'use ' . $namespace . '\\', $content);
-                    file_put_contents($file->getPathname(), $content);
+        foreach ($dirsToUpdate as $directory) {
+            $fullPath = $dir . '/' . $directory;
+
+            if (is_dir($fullPath)) {
+                $iterator = new \RecursiveIteratorIterator(
+                    new \RecursiveDirectoryIterator($fullPath, \RecursiveDirectoryIterator::SKIP_DOTS)
+                );
+
+                foreach ($iterator as $file) {
+                    if ($file->getExtension() === 'php') {
+                        $content = file_get_contents($file->getPathname());
+                        // Replace App namespace with new namespace
+                        $content = str_replace('namespace App\\', 'namespace ' . $namespace . '\\', $content);
+                        $content = str_replace('namespace App;', 'namespace ' . $namespace . ';', $content);
+                        $content = str_replace('use App\\', 'use ' . $namespace . '\\', $content);
+                        file_put_contents($file->getPathname(), $content);
+                    }
                 }
             }
         }
