@@ -100,6 +100,10 @@ class ModuleManager
                 'provider' => \ZephyrPHP\Queue\QueueServiceProvider::class,
                 'dependencies' => [],
             ],
+            'cms' => [
+                'provider' => \ZephyrPHP\Cms\CmsServiceProvider::class,
+                'dependencies' => ['database', 'auth', 'authorization'],
+            ],
         ];
 
         // Check which packages are installed

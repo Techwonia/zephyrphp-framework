@@ -157,6 +157,19 @@ PHP;
                 $this->note('Cache module installed. Configure your cache driver in .env:');
                 $this->line('  CACHE_DRIVER=file|redis|memcached');
                 break;
+
+            case 'cms':
+                $this->line('');
+                $this->section('CMS Module Setup');
+                if ($this->confirm('Would you like to set up the CMS tables now?', true)) {
+                    $this->getApplication()->find('cms:setup')->run(
+                        new \Symfony\Component\Console\Input\ArrayInput([]),
+                        $this->output
+                    );
+                } else {
+                    $this->note('You can set up the CMS later with: php craftsman cms:setup');
+                }
+                break;
         }
     }
 
