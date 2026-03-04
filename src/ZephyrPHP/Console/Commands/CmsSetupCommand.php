@@ -76,18 +76,39 @@ class CmsSetupCommand extends BaseCommand
 
             $this->section('Creating CMS Tables');
 
+            // Use createSchema for initial creation, or manually filter SQL
+            // to avoid SchemaTool dropping non-CMS tables
             $sqls = $schemaTool->getUpdateSchemaSql(array_values($cmsMetadata));
 
-            if (empty($sqls)) {
+            // Filter: only keep CREATE TABLE and ALTER TABLE for cms_ tables
+            $safeSqls = array_filter($sqls, function (string $sql) {
+                $upper = strtoupper(trim($sql));
+                // Allow CREATE TABLE for cms_ tables
+                if (str_starts_with($upper, 'CREATE TABLE') && stripos($sql, 'cms_') !== false) {
+                    return true;
+                }
+                // Allow ALTER TABLE for cms_ tables (add columns, constraints, indexes)
+                if (str_starts_with($upper, 'ALTER TABLE') && stripos($sql, 'cms_') !== false) {
+                    return true;
+                }
+                // Allow CREATE INDEX for cms_ tables
+                if (str_starts_with($upper, 'CREATE INDEX') && stripos($sql, 'cms_') !== false) {
+                    return true;
+                }
+                // Block everything else (DROP TABLE, ALTER on non-cms tables, etc.)
+                return false;
+            });
+
+            if (empty($safeSqls)) {
                 $this->info('CMS tables already exist and are up to date.');
             } else {
-                foreach ($sqls as $sql) {
+                $conn = $em->getConnection();
+                foreach ($safeSqls as $sql) {
                     $this->line("  " . $sql);
+                    $conn->executeStatement($sql);
                 }
                 $this->line('');
-
-                $schemaTool->updateSchema(array_values($cmsMetadata));
-                $this->success('CMS tables created (' . count($sqls) . ' statements executed)');
+                $this->success('CMS tables created (' . count($safeSqls) . ' statements executed)');
             }
 
             // Create upload directory
