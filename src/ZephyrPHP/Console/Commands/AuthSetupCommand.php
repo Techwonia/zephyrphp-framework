@@ -2472,6 +2472,10 @@ TWIG;
     cursor: pointer;
 }
 
+.header-right {
+    margin-left: auto;
+}
+
 .header-user {
     color: var(--text-secondary);
     font-size: 0.875rem;
@@ -2486,13 +2490,21 @@ TWIG;
    Page Header
    ============================================ */
 .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     margin-bottom: var(--spacing-lg);
 }
 
 .page-header h1 {
-    font-size: 1.75rem;
+    margin: 0;
+    font-size: 1.5rem;
     font-weight: 700;
-    margin-bottom: 0.25rem;
+}
+
+.page-header .page-actions {
+    display: flex;
+    gap: 0.5rem;
 }
 
 .text-muted {
@@ -2740,6 +2752,16 @@ TWIG;
     font-weight: 600;
 }
 
+.data-table .sort-link {
+    text-decoration: none;
+    color: inherit;
+    transition: color var(--transition-fast);
+}
+
+.data-table .sort-link:hover {
+    color: var(--primary-color);
+}
+
 .data-table tbody td {
     padding: var(--spacing-sm) var(--spacing-md);
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
@@ -2761,6 +2783,20 @@ TWIG;
     text-align: center;
     color: var(--text-muted);
     padding: var(--spacing-xl) !important;
+}
+
+.empty-state h3 {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+    font-size: 1.1rem;
+}
+
+.empty-state p {
+    margin-bottom: var(--spacing-sm);
+}
+
+.empty-state .btn {
+    margin-top: var(--spacing-xs);
 }
 
 /* ============================================
@@ -2893,6 +2929,397 @@ TWIG;
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.1);
+}
+
+/* ============================================
+   Form Control (all input types)
+   ============================================ */
+.form-control {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--dark-bg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    font-family: var(--font-family);
+    transition: border-color var(--transition-fast);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.1);
+}
+
+.form-control::placeholder {
+    color: var(--text-muted);
+}
+
+.form-control:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238892b0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 2.5rem;
+    cursor: pointer;
+}
+
+select.form-control option {
+    background: var(--dark-bg-secondary);
+    color: var(--text-primary);
+}
+
+input[type="file"].form-control {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+}
+
+input[type="file"].form-control::file-selector-button {
+    background: rgba(0, 217, 255, 0.1);
+    border: 1px solid rgba(0, 217, 255, 0.2);
+    border-radius: var(--radius-sm);
+    color: var(--primary-color);
+    padding: 0.35rem 0.75rem;
+    margin-right: 0.75rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-family: var(--font-family);
+    transition: background var(--transition-fast);
+}
+
+input[type="file"].form-control::file-selector-button:hover {
+    background: rgba(0, 217, 255, 0.2);
+}
+
+.form-control.is-invalid {
+    border-color: #ff5252;
+}
+
+.invalid-feedback {
+    color: #ff5252;
+    font-size: 0.8rem;
+    margin-top: 0.35rem;
+}
+
+/* ============================================
+   Inline Checkboxes
+   ============================================ */
+.form-inline-checks {
+    display: flex;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    margin: var(--spacing-sm) 0;
+}
+
+.form-inline-checks label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color var(--transition-fast);
+}
+
+.form-inline-checks label:hover {
+    color: var(--text-primary);
+}
+
+.form-inline-checks input[type="checkbox"] {
+    accent-color: var(--primary-color);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* ============================================
+   Code Elements
+   ============================================ */
+code {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    padding: 0.15rem 0.45rem;
+    background: rgba(0, 217, 255, 0.08);
+    color: var(--primary-color);
+    border-radius: var(--radius-sm);
+}
+
+/* ============================================
+   Breadcrumb
+   ============================================ */
+.breadcrumb {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-sm);
+}
+
+.breadcrumb a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+.breadcrumb a:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
+
+/* ============================================
+   Field Rows (Collection Fields)
+   ============================================ */
+.field-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem var(--spacing-sm);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    transition: background var(--transition-fast);
+}
+
+.field-row:last-child {
+    border-bottom: none;
+}
+
+.field-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.field-row .field-info {
+    flex: 1;
+}
+
+.field-row .field-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.field-row .field-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+/* ============================================
+   Field Badges
+   ============================================ */
+.field-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: rgba(0, 217, 255, 0.1);
+    color: var(--primary-color);
+    border: 1px solid rgba(0, 217, 255, 0.15);
+}
+
+.field-badge.required {
+    background: rgba(255, 82, 82, 0.1);
+    color: #ff5252;
+    border-color: rgba(255, 82, 82, 0.2);
+}
+
+/* ============================================
+   Add Field Form
+   ============================================ */
+.add-field-form {
+    background: var(--dark-bg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-md);
+    margin-top: var(--spacing-md);
+}
+
+.add-field-form h4 {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.add-field-form .form-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.add-field-form .form-row .form-group {
+    flex: 1;
+    min-width: 150px;
+}
+
+/* ============================================
+   Search Bar
+   ============================================ */
+.search-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: var(--spacing-md);
+}
+
+.search-bar input {
+    flex: 1;
+}
+
+.search-form {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+/* ============================================
+   Pagination (dark theme)
+   ============================================ */
+.pagination {
+    display: flex;
+    gap: 0.35rem;
+    justify-content: center;
+    margin-top: var(--spacing-lg);
+}
+
+.pagination a,
+.pagination span {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    transition: all var(--transition-fast);
+}
+
+.pagination a:hover {
+    background: rgba(0, 217, 255, 0.1);
+    border-color: rgba(0, 217, 255, 0.2);
+    color: var(--primary-color);
+}
+
+.pagination .active {
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    color: var(--dark-bg);
+    border-color: transparent;
+    font-weight: 600;
+}
+
+/* ============================================
+   Media Grid (dark theme)
+   ============================================ */
+.media-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.media-card {
+    background: var(--dark-bg-secondary);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.media-card:hover {
+    border-color: rgba(0, 217, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.media-card .media-preview {
+    height: 130px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--dark-bg);
+    overflow: hidden;
+}
+
+.media-card .media-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: cover;
+}
+
+.media-file-icon {
+    font-size: 2rem;
+    color: var(--text-muted);
+}
+
+.media-card .media-info {
+    padding: 0.75rem;
+    font-size: 0.8rem;
+}
+
+.media-card .media-info .media-name {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.media-card .media-info .media-size {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.media-card .media-info .media-actions {
+    margin-top: 0.5rem;
+    display: flex;
+    gap: 0.25rem;
+}
+
+/* ============================================
+   Upload Form
+   ============================================ */
+.upload-card {
+    margin-bottom: var(--spacing-md);
+}
+
+.upload-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+}
+
+.upload-field {
+    flex: 1;
+    margin-bottom: 0 !important;
+}
+
+/* ============================================
+   Truncate
+   ============================================ */
+.truncate {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* ============================================
+   CMS Sidebar Collections
+   ============================================ */
+.cms-sidebar .nav-collection {
+    font-size: 0.85rem;
+}
+
+.cms-sidebar .nav-collection .entry-count {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin-left: auto;
 }
 CSS;
 
