@@ -41,8 +41,8 @@ class View
     // Shared data available to all views
     protected static array $shared = [];
 
-    // View namespaces for organized templates
-    protected array $namespaces = [];
+    // View namespaces for organized templates (static to persist across instances)
+    protected static array $namespaces = [];
 
     // Component paths
     protected static array $components = [];
@@ -68,6 +68,11 @@ class View
         // Only add debug extension in non-production
         if (!$isProduction) {
             $this->twig->addExtension(new \Twig\Extension\DebugExtension());
+        }
+
+        // Re-apply any previously registered namespaces to the new loader
+        foreach (self::$namespaces as $namespace => $path) {
+            $this->loader->addPath($path, $namespace);
         }
 
         // Register custom functions
