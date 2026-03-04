@@ -343,7 +343,7 @@ class View
     public function addNamespace(string $namespace, string $path): self
     {
         $this->loader->addPath($path, $namespace);
-        $this->namespaces[$namespace] = $path;
+        self::$namespaces[$namespace] = $path;
         return $this;
     }
 
@@ -353,7 +353,7 @@ class View
     public function replaceNamespace(string $namespace, string $path): self
     {
         $this->loader->setPaths([$path], $namespace);
-        $this->namespaces[$namespace] = $path;
+        self::$namespaces[$namespace] = $path;
         return $this;
     }
 
@@ -362,7 +362,7 @@ class View
      */
     public function getNamespaces(): array
     {
-        return $this->namespaces;
+        return self::$namespaces;
     }
 
     // ========================================================================
