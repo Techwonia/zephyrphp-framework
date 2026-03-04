@@ -81,7 +81,8 @@ class AuthMiddleware implements MiddlewareInterface
     {
         // Store intended URL for redirect after login
         $intendedUrl = $_SERVER['REQUEST_URI'] ?? '/';
-        $_SESSION['url.intended'] = $intendedUrl;
+        $session = \ZephyrPHP\Session\Session::getInstance();
+        $session->set('url_intended', $intendedUrl);
 
         header('Location: ' . $this->redirectTo);
         exit;

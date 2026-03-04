@@ -19,7 +19,12 @@ use ZephyrPHP\Auth\Auth;
 class GuestMiddleware implements MiddlewareInterface
 {
     /** @var string Redirect URL for authenticated users */
-    protected string $redirectTo = '/dashboard';
+    protected string $redirectTo;
+
+    public function __construct()
+    {
+        $this->redirectTo = $_ENV['AUTH_HOME'] ?? '/dashboard';
+    }
 
     /**
      * Handle the middleware

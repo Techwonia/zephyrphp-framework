@@ -691,16 +691,30 @@ class Route
 
     private static function runMiddlewareChain(array &$parameters, array $middlewares): void
     {
-        foreach ($middlewares as $middleware) {
+        $next = function ($request) {
+            // Final handler — just continue (middleware chain passed)
+            return $request;
+        };
+
+        // Build pipeline from last to first
+        foreach (array_reverse($middlewares) as $middleware) {
+            $currentNext = $next;
             if (is_callable($middleware)) {
-                call_user_func_array($middleware, [&$parameters]);
+                $next = function ($request) use ($middleware, $currentNext) {
+                    return call_user_func($middleware, $request, $currentNext);
+                };
             } elseif (is_string($middleware) && class_exists($middleware)) {
-                $instance = new $middleware();
-                if (method_exists($instance, 'handle')) {
-                    $instance->handle($parameters);
-                }
+                $next = function ($request) use ($middleware, $currentNext) {
+                    $instance = new $middleware();
+                    if (method_exists($instance, 'handle')) {
+                        return $instance->handle($request, $currentNext);
+                    }
+                    return $currentNext($request);
+                };
             }
         }
+
+        $next($parameters);
     }
 
     private static function autowireParameters(array $reflectionParams, array $routeParams): array

@@ -44,6 +44,7 @@ class AuthSetupCommand extends BaseCommand
         // Step 4: Generate everything
         $this->section('Generating Files');
 
+        $this->generateAuthConfig();
         $this->generateUserModel();
         if ($this->hasAuthorization) {
             $this->generateRoleModel();
@@ -127,7 +128,7 @@ class AuthSetupCommand extends BaseCommand
         $this->useJwt = str_contains($authChoice, 'JWT') || str_contains($authChoice, 'Both');
 
         // Build .env config
-        $envConfig = [];
+        $envConfig = ['AUTH_HOME' => '/v1/dashboard'];
 
         if ($this->useSession) {
             $envConfig['SESSION_DRIVER'] = 'file';
@@ -187,6 +188,29 @@ class AuthSetupCommand extends BaseCommand
         $displayLabel = $label ?: $relativePath;
         $this->line("  <info>Created:</info> {$displayLabel}");
         return true;
+    }
+
+    // =========================================================================
+    // Auth Config Generation
+    // =========================================================================
+
+    private function generateAuthConfig(): void
+    {
+        $ns = $this->namespace;
+
+        $content = <<<PHP
+<?php
+
+return [
+    'providers' => [
+        'users' => [
+            'model' => {$ns}\\Models\\User::class,
+        ],
+    ],
+];
+PHP;
+
+        $this->writeFile('config/auth.php', $content);
     }
 
     // =========================================================================
@@ -436,8 +460,8 @@ class LoginController extends Controller
         }
 
         if (Auth::attempt(['email' => \$email, 'password' => \$password], \$remember)) {
-            \$intended = \$this->session->get('url.intended', '/v1/dashboard');
-            \$this->session->remove('url.intended');
+            \$intended = \$this->session->get('url_intended', '/v1/dashboard');
+            \$this->session->remove('url_intended');
             \$this->redirect(\$intended);
             return;
         }
@@ -837,7 +861,7 @@ TWIG;
             $rolesLink = <<<'TWIG'
 
                 <li>
-                    <a href="/v1/dashboard/settings" class="{% if current_route() starts with '/v1/dashboard/settings' %}active{% endif %}">
+                    <a href="/v1/dashboard/settings" class="{% if request().path() starts with '/v1/dashboard/settings' %}active{% endif %}">
                         <span class="nav-icon">&#9881;</span> Settings & Roles
                     </a>
                 </li>
@@ -846,7 +870,7 @@ TWIG;
             $rolesLink = <<<'TWIG'
 
                 <li>
-                    <a href="/v1/dashboard/settings" class="{% if current_route() starts with '/v1/dashboard/settings' %}active{% endif %}">
+                    <a href="/v1/dashboard/settings" class="{% if request().path() starts with '/v1/dashboard/settings' %}active{% endif %}">
                         <span class="nav-icon">&#9881;</span> Settings
                     </a>
                 </li>
@@ -874,7 +898,7 @@ TWIG;
         <nav class="sidebar-nav">
             <ul>
                 <li>
-                    <a href="/v1/dashboard" class="{% if current_route() == '/v1/dashboard' %}active{% endif %}">
+                    <a href="/v1/dashboard" class="{% if request().path() == '/v1/dashboard' %}active{% endif %}">
                         <span class="nav-icon">&#9632;</span> Dashboard
                     </a>
                 </li>{$rolesLink}
@@ -1816,10 +1840,12 @@ use ZephyrPHP\\Middleware\\AuthMiddleware;
 use ZephyrPHP\\Middleware\\GuestMiddleware;
 
 // Guest routes (login, register)
-Route::get('/login', [LoginController::class, 'showLoginForm'])->middleware([GuestMiddleware::class]);
-Route::post('/login', [LoginController::class, 'login'])->middleware([GuestMiddleware::class]);
-Route::get('/register', [RegisterController::class, 'showRegisterForm'])->middleware([GuestMiddleware::class]);
-Route::post('/register', [RegisterController::class, 'store'])->middleware([GuestMiddleware::class]);
+Route::group(['middleware' => [GuestMiddleware::class]], function () {
+    Route::get('/login', [LoginController::class, 'showLoginForm']);
+    Route::post('/login', [LoginController::class, 'login']);
+    Route::get('/register', [RegisterController::class, 'showRegisterForm']);
+    Route::post('/register', [RegisterController::class, 'store']);
+});
 Route::post('/logout', [LoginController::class, 'logout']);
 
 // Dashboard routes (authenticated)
