@@ -1742,7 +1742,7 @@ TWIG;
                     <option value="">— No role —</option>
                     {% for role in roles %}
                         <option value="{{ role.getId() }}"
-                                {% if default_role_id == role.getId()|string %}selected{% endif %}>
+                                {% if default_role_id == role.getId() ~ '' %}selected{% endif %}>
                             {{ role.getName() }}
                         </option>
                     {% endfor %}
