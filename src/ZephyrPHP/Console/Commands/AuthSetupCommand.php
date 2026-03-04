@@ -608,6 +608,16 @@ PHP;
             }
             $user->assignRole($adminRole);
             $user->save();
+        } else {
+            // Assign the default registration role configured by admin
+            $defaultRoleId = Setting::get('default_registration_role', '');
+            if ($defaultRoleId !== '') {
+                $defaultRole = Role::find((int) $defaultRoleId);
+                if ($defaultRole) {
+                    $user->assignRole($defaultRole);
+                    $user->save();
+                }
+            }
         }
 PHP;
         }
@@ -830,6 +840,7 @@ namespace {$ns}\\Controllers\\Dashboard;
 use ZephyrPHP\\Core\\Controllers\\Controller;
 use ZephyrPHP\\Auth\\Auth;
 use {$ns}\\Models\\Setting;
+use {$ns}\\Models\\Role;
 
 class AdminController extends Controller
 {
@@ -845,9 +856,14 @@ class AdminController extends Controller
     {
         \$this->requireAdmin();
 
+        \$roles = Role::findAll();
+        \$defaultRoleId = Setting::get('default_registration_role', '');
+
         return \$this->render('dashboard/admin/settings', [
             'user' => Auth::user(),
             'registration_enabled' => Setting::get('registration_enabled', 'true') === 'true',
+            'roles' => \$roles,
+            'default_role_id' => \$defaultRoleId,
         ]);
     }
 
@@ -857,6 +873,9 @@ class AdminController extends Controller
 
         \$registrationEnabled = \$this->boolean('registration_enabled');
         Setting::set('registration_enabled', \$registrationEnabled ? 'true' : 'false');
+
+        \$defaultRoleId = \$this->input('default_registration_role', '');
+        Setting::set('default_registration_role', \$defaultRoleId);
 
         \$this->flash('success', 'Admin settings updated successfully.');
         \$this->back();
@@ -1714,6 +1733,22 @@ TWIG;
                 </div>
                 <p class="text-muted" style="margin-top: 0.5rem; font-size: 0.8rem;">
                     When disabled, only admins can create new users from the Users management page.
+                </p>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label for="default_registration_role">Default Role for New Registrations</label>
+                <select name="default_registration_role" id="default_registration_role" class="form-control">
+                    <option value="">— No role —</option>
+                    {% for role in roles %}
+                        <option value="{{ role.getId() }}"
+                                {% if default_role_id == role.getId()|string %}selected{% endif %}>
+                            {{ role.getName() }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <p class="text-muted" style="margin-top: 0.5rem; font-size: 0.8rem;">
+                    Users who register via the public registration form will automatically be assigned this role.
                 </p>
             </div>
 
