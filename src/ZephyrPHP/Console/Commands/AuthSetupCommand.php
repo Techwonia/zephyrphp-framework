@@ -445,11 +445,11 @@ use ZephyrPHP\\Database\\Model;
 #[ORM\\HasLifecycleCallbacks]
 class Setting extends Model
 {
-    #[ORM\\Column(type: 'string', length: 100, unique: true)]
-    protected string \$key = '';
+    #[ORM\\Column(name: 'setting_key', type: 'string', length: 100, unique: true)]
+    protected string \$settingKey = '';
 
-    #[ORM\\Column(type: 'text', nullable: true)]
-    protected ?string \$value = null;
+    #[ORM\\Column(name: 'setting_value', type: 'text', nullable: true)]
+    protected ?string \$settingValue = null;
 
     public function __construct()
     {
@@ -457,42 +457,42 @@ class Setting extends Model
         \$this->updatedAt = new \\DateTime();
     }
 
-    public function getKey(): string
+    public function getSettingKey(): string
     {
-        return \$this->key;
+        return \$this->settingKey;
     }
 
-    public function setKey(string \$key): self
+    public function setSettingKey(string \$settingKey): self
     {
-        \$this->key = \$key;
+        \$this->settingKey = \$settingKey;
         return \$this;
     }
 
-    public function getValue(): ?string
+    public function getSettingValue(): ?string
     {
-        return \$this->value;
+        return \$this->settingValue;
     }
 
-    public function setValue(?string \$value): self
+    public function setSettingValue(?string \$settingValue): self
     {
-        \$this->value = \$value;
+        \$this->settingValue = \$settingValue;
         return \$this;
     }
 
     public static function get(string \$key, mixed \$default = null): mixed
     {
-        \$setting = self::findOneBy(['key' => \$key]);
-        return \$setting ? \$setting->getValue() : \$default;
+        \$setting = self::findOneBy(['settingKey' => \$key]);
+        return \$setting ? \$setting->getSettingValue() : \$default;
     }
 
     public static function set(string \$key, mixed \$value): void
     {
-        \$setting = self::findOneBy(['key' => \$key]);
+        \$setting = self::findOneBy(['settingKey' => \$key]);
         if (!\$setting) {
             \$setting = new self();
-            \$setting->setKey(\$key);
+            \$setting->setSettingKey(\$key);
         }
-        \$setting->setValue((string) \$value);
+        \$setting->setSettingValue((string) \$value);
         \$setting->save();
     }
 }
@@ -2971,13 +2971,13 @@ class CreateAppSettingsTable extends Migration
     {
         $this->createTable('app_settings', function ($table) {
             $table->addColumn('id', 'integer', ['autoincrement' => true, 'unsigned' => true]);
-            $table->addColumn('key', 'string', ['length' => 100]);
-            $table->addColumn('value', 'text', ['notnull' => false]);
+            $table->addColumn('setting_key', 'string', ['length' => 100]);
+            $table->addColumn('setting_value', 'text', ['notnull' => false]);
             $table->addColumn('created_at', 'datetime', ['notnull' => false]);
             $table->addColumn('updated_at', 'datetime', ['notnull' => false]);
 
             $table->setPrimaryKey(['id']);
-            $table->addUniqueIndex(['key'], 'app_settings_key_unique');
+            $table->addUniqueIndex(['setting_key'], 'app_settings_key_unique');
         });
     }
 
