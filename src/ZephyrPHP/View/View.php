@@ -358,6 +358,15 @@ class View
     }
 
     /**
+     * Prepend a template path (higher priority than default)
+     */
+    public function prependTemplatePath(string $path): self
+    {
+        $this->loader->prependPath($path);
+        return $this;
+    }
+
+    /**
      * Get all namespaces
      */
     public function getNamespaces(): array
