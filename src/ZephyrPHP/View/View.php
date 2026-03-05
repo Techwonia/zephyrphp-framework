@@ -44,6 +44,9 @@ class View
     // View namespaces for organized templates (static to persist across instances)
     protected static array $namespaces = [];
 
+    // Prepended template paths (static to persist across instances)
+    protected static array $prependedPaths = [];
+
     // Component paths
     protected static array $components = [];
 
@@ -73,6 +76,11 @@ class View
         // Re-apply any previously registered namespaces to the new loader
         foreach (self::$namespaces as $namespace => $path) {
             $this->loader->addPath($path, $namespace);
+        }
+
+        // Re-apply any previously prepended paths
+        foreach (self::$prependedPaths as $path) {
+            $this->loader->prependPath($path);
         }
 
         // Register custom functions
@@ -363,6 +371,9 @@ class View
     public function prependTemplatePath(string $path): self
     {
         $this->loader->prependPath($path);
+        if (!in_array($path, self::$prependedPaths, true)) {
+            self::$prependedPaths[] = $path;
+        }
         return $this;
     }
 
