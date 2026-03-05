@@ -182,6 +182,8 @@ class Installer
                         $content = str_replace('namespace App\\', 'namespace ' . $namespace . '\\', $content);
                         $content = str_replace('namespace App;', 'namespace ' . $namespace . ';', $content);
                         $content = str_replace('use App\\', 'use ' . $namespace . '\\', $content);
+                        // Replace bare class references (e.g. App\Models\User::class in config files)
+                        $content = str_replace('App\\', $namespace . '\\', $content);
                         file_put_contents($file->getPathname(), $content);
                     }
                 }
