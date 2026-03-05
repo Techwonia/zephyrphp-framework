@@ -164,8 +164,8 @@ class Installer
             );
         }
 
-        // Update PHP files in app/ and routes/ recursively
-        $dirsToUpdate = ['app', 'routes'];
+        // Update PHP files in app/, routes/, and config/ recursively
+        $dirsToUpdate = ['app', 'routes', 'config'];
 
         foreach ($dirsToUpdate as $directory) {
             $fullPath = $dir . '/' . $directory;
