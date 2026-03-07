@@ -226,7 +226,7 @@ if (!function_exists('view')) {
      */
     function view(string $template, array $variables = [], int $statusCode = 200): Response
     {
-        $content = (new View())->render($template, $variables);
+        $content = View::getInstance()->render($template, $variables);
         return Response::html($content, $statusCode);
     }
 }

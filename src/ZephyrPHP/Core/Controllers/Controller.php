@@ -20,7 +20,7 @@ abstract class Controller
 
     public function __construct()
     {
-        $this->view = new View();
+        $this->view = View::getInstance();
         $this->request = Request::getInstance();
         $this->response = new Response();
         $this->session = Session::getInstance();
