@@ -796,6 +796,15 @@ class Handler
                 return;
             }
 
+            // For HttpException (abort), try user error template first even in debug mode
+            if ($e instanceof HttpException) {
+                $title = $this->getProductionTitle($statusCode);
+                $message = $e->getMessage() ?: $this->getProductionMessage($statusCode);
+                if ($this->renderErrorTemplate($statusCode, $title, $message)) {
+                    return;
+                }
+            }
+
             if ($this->debug) {
                 $this->renderDebug($e, $statusCode);
             } else {
