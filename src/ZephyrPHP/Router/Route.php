@@ -7,6 +7,11 @@ namespace ZephyrPHP\Router;
 use ZephyrPHP\Container\Container as AppContainer;
 use ZephyrPHP\Core\Http\Response;
 use ZephyrPHP\Exception\HttpException;
+use ZephyrPHP\Event\EventDispatcher;
+use ZephyrPHP\Event\Events\RequestHandling;
+use ZephyrPHP\Event\Events\RequestHandled;
+use ZephyrPHP\Event\Events\RouteMatched;
+use ZephyrPHP\Hook\HookManager;
 use Closure;
 
 /**
@@ -595,11 +600,22 @@ class Route
             $method = strtoupper($_POST['_method'] ?? $_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'] ?? 'POST');
         }
 
+        // Fire request.handling event
+        $events = EventDispatcher::getInstance();
+        $hooks = HookManager::getInstance();
+
+        $events->dispatch(new RequestHandling($method, $path));
+        $hooks->doAction('request.handling', $method, $path);
+
         $callbackInfo = self::findCallback($method, $path, $queryParams);
 
         if ($callbackInfo) {
             [$callback, $parameters, $statusCode, $routeMiddleware] = $callbackInfo;
             http_response_code($statusCode);
+
+            // Fire route.matched event
+            $events->dispatch(new RouteMatched($method, $path, $callback, $parameters));
+            $hooks->doAction('route.matched', $method, $path, $callback, $parameters);
 
             // Resolve model bindings
             self::resolveModelBindings($parameters);
@@ -626,6 +642,10 @@ class Route
             $response = call_user_func_array($callback, $parameters);
 
             self::sendResponse($response);
+
+            // Fire request.handled event
+            $events->dispatch(new RequestHandled($method, $path, http_response_code()));
+            $hooks->doAction('request.handled', $method, $path, http_response_code());
         } elseif (self::$fallbackRoute) {
             // Use fallback route
             $callback = self::$fallbackRoute['callback'];
@@ -637,6 +657,9 @@ class Route
             $response = call_user_func($callback);
 
             self::sendResponse($response);
+
+            $events->dispatch(new RequestHandled($method, $path, http_response_code()));
+            $hooks->doAction('request.handled', $method, $path, http_response_code());
         } else {
             $allowedMethods = self::getAllowedMethods($path);
 

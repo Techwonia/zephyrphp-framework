@@ -470,6 +470,93 @@ if (!function_exists('retry')) {
 }
 
 // ============================================================================
+// EVENT & HOOK HELPERS
+// ============================================================================
+
+if (!function_exists('event')) {
+    /**
+     * Dispatch an event to all registered listeners.
+     *
+     * @param \ZephyrPHP\Event\Event $event The event to dispatch
+     * @return \ZephyrPHP\Event\Event The dispatched event
+     */
+    function event(\ZephyrPHP\Event\Event $event): \ZephyrPHP\Event\Event
+    {
+        return \ZephyrPHP\Event\EventDispatcher::getInstance()->dispatch($event);
+    }
+}
+
+if (!function_exists('listen')) {
+    /**
+     * Register a listener for an event class.
+     *
+     * @param string $eventClass Fully qualified event class name
+     * @param callable|string $listener Callable or "Class@method" string
+     * @param int $priority Lower = earlier (default 0)
+     */
+    function listen(string $eventClass, callable|string $listener, int $priority = 0): void
+    {
+        \ZephyrPHP\Event\EventDispatcher::getInstance()->listen($eventClass, $listener, $priority);
+    }
+}
+
+if (!function_exists('action')) {
+    /**
+     * Register a callback for an action hook.
+     *
+     * @param string $hook Hook name (e.g., 'page.saved')
+     * @param callable $callback The callback to execute
+     * @param int $priority Lower = earlier (default 10)
+     */
+    function action(string $hook, callable $callback, int $priority = 10): void
+    {
+        \ZephyrPHP\Hook\HookManager::getInstance()->addAction($hook, $callback, $priority);
+    }
+}
+
+if (!function_exists('do_action')) {
+    /**
+     * Execute all callbacks for an action hook.
+     *
+     * @param string $hook Hook name
+     * @param mixed ...$args Arguments to pass to callbacks
+     */
+    function do_action(string $hook, mixed ...$args): void
+    {
+        \ZephyrPHP\Hook\HookManager::getInstance()->doAction($hook, ...$args);
+    }
+}
+
+if (!function_exists('filter')) {
+    /**
+     * Register a callback for a filter hook.
+     *
+     * @param string $hook Hook name (e.g., 'page.content')
+     * @param callable $callback Receives value, returns modified value
+     * @param int $priority Lower = earlier (default 10)
+     */
+    function filter(string $hook, callable $callback, int $priority = 10): void
+    {
+        \ZephyrPHP\Hook\HookManager::getInstance()->addFilter($hook, $callback, $priority);
+    }
+}
+
+if (!function_exists('apply_filter')) {
+    /**
+     * Apply all filter callbacks to a value.
+     *
+     * @param string $hook Hook name
+     * @param mixed $value The value to filter
+     * @param mixed ...$args Additional arguments
+     * @return mixed The filtered value
+     */
+    function apply_filter(string $hook, mixed $value, mixed ...$args): mixed
+    {
+        return \ZephyrPHP\Hook\HookManager::getInstance()->applyFilter($hook, $value, ...$args);
+    }
+}
+
+// ============================================================================
 // MODULE HELPERS
 // ============================================================================
 

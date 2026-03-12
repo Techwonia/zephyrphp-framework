@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace ZephyrPHP\Module;
 
 use ZephyrPHP\Container\Container;
+use ZephyrPHP\Event\EventDispatcher;
+use ZephyrPHP\Event\Events\ModuleBooting;
+use ZephyrPHP\Event\Events\ModuleBooted;
+use ZephyrPHP\Hook\HookManager;
 
 /**
  * Module Manager
@@ -236,6 +240,12 @@ class ModuleManager
             // Create provider instance
             $provider = new $providerClass();
 
+            // Fire module.booting event
+            $events = EventDispatcher::getInstance();
+            $hooks = HookManager::getInstance();
+            $events->dispatch(new ModuleBooting($name, $providerClass));
+            $hooks->doAction('module.booting', $name, $providerClass);
+
             // Register services
             if (method_exists($provider, 'register')) {
                 $provider->register($this->container);
@@ -250,6 +260,10 @@ class ModuleManager
             }
 
             $this->modules[$name] = $provider;
+
+            // Fire module.booted event
+            $events->dispatch(new ModuleBooted($name, $provider));
+            $hooks->doAction('module.booted', $name, $provider);
         }
 
         $this->booted = true;

@@ -13,6 +13,11 @@ use ZephyrPHP\Asset\Asset;
 use ZephyrPHP\Config\Config;
 use ZephyrPHP\Container\Container;
 use ZephyrPHP\Module\ModuleManager;
+use ZephyrPHP\Event\EventDispatcher;
+use ZephyrPHP\Event\Events\AppBooting;
+use ZephyrPHP\Event\Events\AppBooted;
+use ZephyrPHP\Event\Events\AppTerminating;
+use ZephyrPHP\Hook\HookManager;
 
 class Application
 {
@@ -22,6 +27,8 @@ class Application
     private ?LogManager $logger = null;
     private ?Container $container = null;
     private ?ModuleManager $modules = null;
+    private ?EventDispatcher $events = null;
+    private ?HookManager $hooks = null;
 
     public function __construct()
     {
@@ -38,6 +45,15 @@ class Application
         Handler::register();
 
         $this->configureErrorHandling();
+
+        // Initialize event dispatcher and hook manager (before modules)
+        $this->events = EventDispatcher::getInstance();
+        $this->events->setContainer($this->container);
+        $this->hooks = HookManager::getInstance();
+
+        // Fire app.booting event — listeners can prepare before modules load
+        $this->events->dispatch(new AppBooting());
+        $this->hooks->doAction('app.booting');
 
         // Initialize module manager and load modules
         $this->modules = ModuleManager::getInstance();
@@ -63,6 +79,10 @@ class Application
         }
 
         $this->booted = true;
+
+        // Fire app.booted event — application is fully ready
+        $this->events->dispatch(new AppBooted());
+        $this->hooks->doAction('app.booted');
 
         $this->logger->info('Application booted', [
             'environment' => $this->getEnvironment(),
@@ -108,6 +128,12 @@ class Application
         $this->container->singleton(Session::class, fn() => Session::getInstance());
         $this->container->singleton(LogManager::class, fn() => LogManager::getInstance());
         $this->container->singleton(\ZephyrPHP\Core\Http\Request::class, fn() => \ZephyrPHP\Core\Http\Request::getInstance());
+
+        // Register event dispatcher and hook manager
+        $this->container->singleton(EventDispatcher::class, fn() => EventDispatcher::getInstance());
+        $this->container->singleton(HookManager::class, fn() => HookManager::getInstance());
+        $this->container->singleton('events', fn() => EventDispatcher::getInstance());
+        $this->container->singleton('hooks', fn() => HookManager::getInstance());
     }
 
     protected function configureErrorHandling(): void
@@ -273,11 +299,35 @@ class Application
 
     public function terminate(): void
     {
+        // Fire terminating event before cleanup
+        if ($this->events !== null) {
+            $this->events->dispatch(new AppTerminating());
+        }
+        if ($this->hooks !== null) {
+            $this->hooks->doAction('app.terminating');
+        }
+
         if ($this->session !== null) {
             session_write_close();
         }
 
         $this->logger->debug('Application terminated');
+    }
+
+    /**
+     * Get the event dispatcher instance
+     */
+    public function getEvents(): EventDispatcher
+    {
+        return $this->events;
+    }
+
+    /**
+     * Get the hook manager instance
+     */
+    public function getHooks(): HookManager
+    {
+        return $this->hooks;
     }
 
     public function version(): string
