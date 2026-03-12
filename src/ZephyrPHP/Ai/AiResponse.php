@@ -77,17 +77,40 @@ class AiResponse
      */
     public function json(): ?array
     {
+        $content = trim($this->content);
+
         // Try direct parse first
-        $data = json_decode($this->content, true);
-        if ($data !== null) {
+        $data = json_decode($content, true);
+        if (is_array($data)) {
             return $data;
         }
 
-        // Try to extract JSON from markdown code blocks
-        if (preg_match('/```(?:json)?\s*\n([\s\S]*?)\n```/', $this->content, $matches)) {
-            $data = json_decode($matches[1], true);
-            if ($data !== null) {
+        // Try to extract JSON from markdown code blocks (greedy match for full content)
+        if (preg_match('/```(?:json)?\s*\n?([\s\S]+?)\n?\s*```/', $content, $matches)) {
+            $data = json_decode(trim($matches[1]), true);
+            if (is_array($data)) {
                 return $data;
+            }
+        }
+
+        // Try to find the first { ... } JSON object in the response
+        $start = strpos($content, '{');
+        if ($start !== false) {
+            $candidate = substr($content, $start);
+            // Find matching closing brace by counting braces
+            $depth = 0;
+            $len = strlen($candidate);
+            for ($i = 0; $i < $len; $i++) {
+                if ($candidate[$i] === '{') $depth++;
+                elseif ($candidate[$i] === '}') $depth--;
+                if ($depth === 0) {
+                    $jsonStr = substr($candidate, 0, $i + 1);
+                    $data = json_decode($jsonStr, true);
+                    if (is_array($data)) {
+                        return $data;
+                    }
+                    break;
+                }
             }
         }
 

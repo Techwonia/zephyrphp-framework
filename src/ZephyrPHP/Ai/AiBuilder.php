@@ -273,22 +273,45 @@ PROMPT;
     {
         $data = $response->json();
 
-        if (!$data) {
-            // If JSON parsing fails, treat the entire response as template content
+        if ($data && !empty($data['template'])) {
             return new GeneratedPage(
-                template: $response->getContent(),
-                title: 'AI Generated Page',
+                template: $data['template'],
+                title: $data['title'] ?? 'AI Generated Page',
+                sections: $data['sections'] ?? [],
+                settings: $data['settings'] ?? [],
+                layout: $data['layout'] ?? 'base',
+                css: $data['css'] ?? null,
                 response: $response
             );
         }
 
+        // JSON parsing failed or no template key — try to extract Twig template from raw content
+        $content = trim($response->getContent());
+
+        // Strip markdown code fences if present
+        if (preg_match('/```(?:twig|html|jinja2?)?\s*\n([\s\S]+?)\n\s*```/', $content, $matches)) {
+            $content = trim($matches[1]);
+        }
+
+        // If content looks like JSON (not Twig), try harder to extract template
+        if (str_starts_with($content, '{') && !str_contains($content, '{%')) {
+            $json = json_decode($content, true);
+            if (is_array($json) && !empty($json['template'])) {
+                return new GeneratedPage(
+                    template: $json['template'],
+                    title: $json['title'] ?? 'AI Generated Page',
+                    sections: $json['sections'] ?? [],
+                    settings: $json['settings'] ?? [],
+                    layout: $json['layout'] ?? 'base',
+                    css: $json['css'] ?? null,
+                    response: $response
+                );
+            }
+        }
+
         return new GeneratedPage(
-            template: $data['template'] ?? '',
-            title: $data['title'] ?? 'AI Generated Page',
-            sections: $data['sections'] ?? [],
-            settings: $data['settings'] ?? [],
-            layout: $data['layout'] ?? 'base',
-            css: $data['css'] ?? null,
+            template: $content,
+            title: 'AI Generated Page',
             response: $response
         );
     }
@@ -300,18 +323,24 @@ PROMPT;
     {
         $data = $response->json();
 
-        if (!$data) {
-            return [
-                'name' => 'AI Generated Section',
-                'slug' => 'ai-section-' . time(),
-                'template' => $response->getContent(),
-                'preview_description' => '',
-                'css' => '',
-                'usage' => $response->toArray(),
-            ];
+        if ($data && !empty($data['template'])) {
+            $data['usage'] = $response->toArray();
+            return $data;
         }
 
-        $data['usage'] = $response->toArray();
-        return $data;
+        // Fallback: try to extract Twig from raw content
+        $content = trim($response->getContent());
+        if (preg_match('/```(?:twig|html|jinja2?)?\s*\n([\s\S]+?)\n\s*```/', $content, $matches)) {
+            $content = trim($matches[1]);
+        }
+
+        return [
+            'name' => 'AI Generated Section',
+            'slug' => 'ai-section-' . time(),
+            'template' => $content,
+            'preview_description' => '',
+            'css' => '',
+            'usage' => $response->toArray(),
+        ];
     }
 }
