@@ -30,6 +30,30 @@ class ServeCommand extends BaseCommand
         $port = $input->getArgument('port');
         $publicPath = $this->basePath('public');
 
+        // Create a router script so the built-in server passes
+        // non-static-file requests through to the framework
+        $routerPath = $this->basePath('storage/.server-router.php');
+        $routerCode = <<<'ROUTER'
+<?php
+// PHP built-in server router script
+// Serve existing static files directly, route everything else to index.php
+$uri = urldecode(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH));
+$publicPath = $_SERVER['DOCUMENT_ROOT'];
+
+// If the file exists in public/, let the built-in server handle it
+if ($uri !== '/' && file_exists($publicPath . $uri)) {
+    return false;
+}
+
+// Otherwise, route through the framework
+require $publicPath . '/index.php';
+ROUTER;
+        $storageDir = dirname($routerPath);
+        if (!is_dir($storageDir)) {
+            mkdir($storageDir, 0755, true);
+        }
+        file_put_contents($routerPath, $routerCode);
+
         $this->line('');
         $this->info('ZephyrPHP Development Server');
         $this->line('');
@@ -37,7 +61,7 @@ class ServeCommand extends BaseCommand
         $this->line('Press Ctrl+C to stop the server');
         $this->line('');
 
-        passthru("php -S {$host}:{$port} -t \"{$publicPath}\"");
+        passthru("php -S {$host}:{$port} -t \"{$publicPath}\" \"{$routerPath}\"");
 
         return self::SUCCESS;
     }
