@@ -470,6 +470,103 @@ if (!function_exists('retry')) {
 }
 
 // ============================================================================
+// ENVIRONMENT DETECTION HELPERS
+// ============================================================================
+
+if (!function_exists('environment')) {
+    /**
+     * Get the current environment name or check if it matches.
+     *
+     * Usage:
+     *   environment()              // "production"
+     *   environment('production')  // true
+     *   environment('dev', 'local') // true if either matches
+     */
+    function environment(string ...$environments): string|bool
+    {
+        $current = $_ENV['ENV'] ?? 'dev';
+
+        if (empty($environments)) {
+            return $current;
+        }
+
+        return in_array($current, $environments, true);
+    }
+}
+
+if (!function_exists('is_production')) {
+    function is_production(): bool
+    {
+        return environment('production', 'prod');
+    }
+}
+
+if (!function_exists('is_local')) {
+    function is_local(): bool
+    {
+        return environment('local', 'dev', 'development');
+    }
+}
+
+if (!function_exists('is_testing')) {
+    function is_testing(): bool
+    {
+        return environment('testing', 'test');
+    }
+}
+
+if (!function_exists('is_staging')) {
+    function is_staging(): bool
+    {
+        return environment('staging', 'stage');
+    }
+}
+
+if (!function_exists('debug_mode')) {
+    /**
+     * Check if debug mode is enabled.
+     */
+    function debug_mode(): bool
+    {
+        return filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    }
+}
+
+// ============================================================================
+// TRANSLATION HELPERS
+// ============================================================================
+
+if (!function_exists('__')) {
+    /**
+     * Translate a string.
+     *
+     * Usage:
+     *   __('messages.welcome')
+     *   __('messages.hello', ['name' => 'John'])
+     */
+    function __(string $key, array $replace = [], ?string $locale = null): string
+    {
+        if (class_exists(\ZephyrPHP\Translation\Translator::class)) {
+            return \ZephyrPHP\Translation\Translator::getInstance()->get($key, $replace, $locale);
+        }
+        return $key;
+    }
+}
+
+if (!function_exists('trans_choice')) {
+    /**
+     * Translate with pluralization.
+     */
+    function trans_choice(string $key, int $count, array $replace = [], ?string $locale = null): string
+    {
+        if (class_exists(\ZephyrPHP\Translation\Translator::class)) {
+            return \ZephyrPHP\Translation\Translator::getInstance()->choice($key, $count, $replace, $locale);
+        }
+        return $key;
+    }
+}
+
+// ============================================================================
 // EVENT & HOOK HELPERS
 // ============================================================================
 

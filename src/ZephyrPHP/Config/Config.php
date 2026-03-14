@@ -11,6 +11,11 @@ class Config
 
     public static function load(string $path): void
     {
+        // Try loading from cache first
+        if (self::loadFromCache()) {
+            return;
+        }
+
         if (!is_dir($path)) {
             return;
         }
@@ -120,5 +125,79 @@ class Config
     {
         self::$config = [];
         self::$loaded = false;
+    }
+
+    /**
+     * Cache all loaded configuration to a single PHP file.
+     *
+     * Usage (via craftsman command or manually):
+     *   Config::load(BASE_PATH . '/config');
+     *   Config::cache();
+     */
+    public static function cache(): bool
+    {
+        $cachePath = self::getCachePath();
+        $dir = dirname($cachePath);
+
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $content = '<?php return ' . var_export(self::$config, true) . ';' . PHP_EOL;
+
+        return file_put_contents($cachePath, $content, LOCK_EX) !== false;
+    }
+
+    /**
+     * Load configuration from the cache file.
+     */
+    protected static function loadFromCache(): bool
+    {
+        $cachePath = self::getCachePath();
+
+        if (!file_exists($cachePath)) {
+            return false;
+        }
+
+        $data = require $cachePath;
+
+        if (is_array($data)) {
+            self::$config = $data;
+            self::$loaded = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Remove the configuration cache file.
+     */
+    public static function clearCache(): bool
+    {
+        $cachePath = self::getCachePath();
+
+        if (file_exists($cachePath)) {
+            return unlink($cachePath);
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if a configuration cache file exists.
+     */
+    public static function isCached(): bool
+    {
+        return file_exists(self::getCachePath());
+    }
+
+    /**
+     * Get the path to the config cache file.
+     */
+    protected static function getCachePath(): string
+    {
+        $basePath = defined('BASE_PATH') ? BASE_PATH : getcwd();
+        return $basePath . '/storage/cache/config.php';
     }
 }
