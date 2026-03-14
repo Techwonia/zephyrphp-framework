@@ -127,6 +127,11 @@ class ModuleManager
     {
         foreach ($config as $name => $settings) {
             if ($settings === true || (is_array($settings) && ($settings['enabled'] ?? true))) {
+                if (!isset($this->available[$name])) {
+                    // Module enabled in config but not installed — skip gracefully
+                    error_log("[ZephyrPHP] Module '{$name}' is enabled in config but not installed. Skipping.");
+                    continue;
+                }
                 $this->enable($name);
             }
         }
