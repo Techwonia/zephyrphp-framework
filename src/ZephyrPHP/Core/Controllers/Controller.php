@@ -43,7 +43,7 @@ abstract class Controller
         $content = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         $this->response->setContent($content);
         $this->response->send();
-        return $content;
+        return '';
     }
 
     protected function text(string $text, int $statusCode = 200): void
