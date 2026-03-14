@@ -201,9 +201,47 @@ class Application
     public function run(): void
     {
         try {
+            // Check maintenance mode before dispatching routes
+            $this->checkMaintenanceMode();
+
             Route::dispatch();
         } catch (\Throwable $e) {
             Handler::getInstance()->handleException($e);
+        }
+    }
+
+    /**
+     * Check if the application is in maintenance mode.
+     * If so, run the MaintenanceMiddleware which will show a 503 page
+     * (unless the request is bypassed via IP whitelist or secret token).
+     */
+    protected function checkMaintenanceMode(): void
+    {
+        $downFile = (defined('BASE_PATH') ? BASE_PATH : getcwd()) . '/storage/framework/down';
+
+        if (!file_exists($downFile)) {
+            return;
+        }
+
+        // Allow CMS routes so admins can bring the app back up
+        $path = $_SERVER['REQUEST_URI'] ?? '/';
+        $path = parse_url($path, PHP_URL_PATH) ?? '/';
+
+        if (str_starts_with($path, '/cms') || str_starts_with($path, '/login')) {
+            return;
+        }
+
+        $middleware = new \ZephyrPHP\Middleware\MaintenanceMiddleware();
+        $bypassed = false;
+
+        $result = $middleware->handle([], function ($request) use (&$bypassed) {
+            $bypassed = true;
+            return $request;
+        });
+
+        // If the middleware did NOT call $next, it rendered the 503 page — stop execution
+        if (!$bypassed) {
+            exit;
         }
     }
 
