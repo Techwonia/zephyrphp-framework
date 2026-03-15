@@ -444,6 +444,14 @@ class View
     }
 
     /**
+     * Add a Twig extension
+     */
+    public function addExtension(\Twig\Extension\ExtensionInterface $extension): void
+    {
+        $this->twig->addExtension($extension);
+    }
+
+    /**
      * Add a custom filter
      */
     public function addFilter(string $name, callable $filter, array $options = []): void

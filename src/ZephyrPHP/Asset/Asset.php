@@ -62,6 +62,9 @@ class Asset
     /** @var array<string, string> URL cache for performance */
     private static array $urlCache = [];
 
+    /** @var string Path prefix prepended to all asset paths (e.g. 'themes/default/') */
+    private static string $pathPrefix = '';
+
     /** @var array<string, array> Registered external CDN assets */
     private static array $externals = [];
 
@@ -128,6 +131,36 @@ class Asset
     public static function getConfig(string $key, mixed $default = null): mixed
     {
         return self::$config[$key] ?? $default;
+    }
+
+    /**
+     * Set a path prefix for all asset resolution.
+     * When set, all asset paths are automatically prefixed (e.g. 'themes/default/').
+     * Paths that already start with the prefix are not double-prefixed.
+     * Absolute URLs (http/https) are never prefixed.
+     */
+    public static function setPathPrefix(string $prefix): void
+    {
+        self::$pathPrefix = $prefix !== '' ? rtrim($prefix, '/') . '/' : '';
+        // Clear URL cache since paths will resolve differently now
+        self::$urlCache = [];
+    }
+
+    /**
+     * Get the current path prefix
+     */
+    public static function getPathPrefix(): string
+    {
+        return self::$pathPrefix;
+    }
+
+    /**
+     * Clear the path prefix
+     */
+    public static function clearPathPrefix(): void
+    {
+        self::$pathPrefix = '';
+        self::$urlCache = [];
     }
 
     /**
@@ -207,7 +240,8 @@ class Asset
     }
 
     /**
-     * Normalize asset path - ensures consistent path format
+     * Normalize asset path - ensures consistent path format.
+     * Applies the path prefix if set (e.g. for theme-scoped assets).
      */
     private static function normalizePath(string $path): string
     {
@@ -217,11 +251,19 @@ class Asset
         // Convert backslashes to forward slashes
         $path = str_replace('\\', '/', $path);
 
+        // Apply path prefix if set and path is not already prefixed or absolute
+        if (self::$pathPrefix !== ''
+            && !str_starts_with($path, self::$pathPrefix)
+            && !str_starts_with($path, 'http://') && !str_starts_with($path, 'https://')
+        ) {
+            $path = self::$pathPrefix . $path;
+        }
+
         return $path;
     }
 
     /**
-     * Get minified version path if it exists
+     * Get minified version path — serves existing .min file or generates one on-the-fly.
      */
     private static function getMinifiedPath(string $path): string
     {
@@ -231,15 +273,88 @@ class Asset
             return $path;
         }
 
-        // Check if already minified
+        // Already minified
         if (str_ends_with($path, '.min.' . $ext)) {
             return $path;
         }
 
         $minPath = preg_replace('/\.' . $ext . '$/', '.min.' . $ext, $path);
-        $fullPath = self::resolvePath($minPath);
+        $minFullPath = self::resolvePath($minPath);
 
-        return file_exists($fullPath) ? $minPath : $path;
+        // Use existing .min file if it's newer than the source
+        if (file_exists($minFullPath)) {
+            $srcFullPath = self::resolvePath($path);
+            if (!file_exists($srcFullPath) || filemtime($minFullPath) >= filemtime($srcFullPath)) {
+                return $minPath;
+            }
+        }
+
+        // Auto-generate minified file if matthiasmullie/minify is available
+        $srcFullPath = self::resolvePath($path);
+        if (file_exists($srcFullPath)) {
+            $generated = self::generateMinified($srcFullPath, $minFullPath, $ext);
+            if ($generated) {
+                return $minPath;
+            }
+        }
+
+        return $path;
+    }
+
+    /**
+     * Generate a minified version of a CSS or JS file.
+     * Returns true on success, false if minifier not available or on error.
+     */
+    private static function generateMinified(string $sourcePath, string $outputPath, string $ext): bool
+    {
+        try {
+            if ($ext === 'css' && class_exists(\MatthiasMullie\Minify\CSS::class)) {
+                $minifier = new \MatthiasMullie\Minify\CSS($sourcePath);
+                $minifier->minify($outputPath);
+                return file_exists($outputPath);
+            }
+
+            if ($ext === 'js' && class_exists(\MatthiasMullie\Minify\JS::class)) {
+                $minifier = new \MatthiasMullie\Minify\JS($sourcePath);
+                $minifier->minify($outputPath);
+                return file_exists($outputPath);
+            }
+        } catch (\Throwable) {
+            // Silently fail — serve unminified version
+        }
+
+        return false;
+    }
+
+    /**
+     * Minify a CSS or JS file and write the .min version.
+     * Public API for commands and controllers.
+     *
+     * @return string|null Path to the minified file, or null on failure.
+     */
+    public static function minifyFile(string $path): ?string
+    {
+        $fullPath = self::resolvePath($path);
+        if (!file_exists($fullPath)) {
+            return null;
+        }
+
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        if (!in_array($ext, ['css', 'js'])) {
+            return null;
+        }
+
+        if (str_ends_with($path, '.min.' . $ext)) {
+            return null;
+        }
+
+        $minPath = preg_replace('/\.' . $ext . '$/', '.min.' . $ext, $fullPath);
+
+        if (self::generateMinified($fullPath, $minPath, $ext)) {
+            return $minPath;
+        }
+
+        return null;
     }
 
     /**
@@ -920,6 +1035,7 @@ class Asset
         self::$manifest = [];
         self::$collections = [];
         self::$externals = [];
+        self::$pathPrefix = '';
     }
 
     /**
