@@ -224,7 +224,7 @@ class Headers
         $appSrc = $appOrigin ? " {$appOrigin}" : '';
 
         // Common CDN domains allowed by default
-        $cdnDomains = 'https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com';
+        $cdnDomains = 'https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://esm.sh';
 
         $directives = [
             'default-src' => "'self'{$appSrc}" . self::getCustomSources('default-src'),
