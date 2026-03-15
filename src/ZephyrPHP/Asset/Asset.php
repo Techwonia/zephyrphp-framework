@@ -214,8 +214,8 @@ class Asset
             $cleanPath = self::resolveFromManifest($cleanPath);
         }
 
-        // Handle minified versions in production
-        if (self::$config['minify'] && self::isProduction()) {
+        // Handle minified versions when enabled
+        if (self::$config['minify']) {
             $cleanPath = self::getMinifiedPath($cleanPath);
         }
 
