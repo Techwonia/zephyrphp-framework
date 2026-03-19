@@ -194,6 +194,12 @@ class DbSetupCommand extends BaseCommand
             $pdoDriver = $this->getPdoDsnPrefix($doctrineDriver);
             $dbName = $config['DB_DATABASE'];
 
+            // Validate database name to prevent SQL injection
+            if (!preg_match('/^[a-zA-Z0-9_]+$/', $dbName)) {
+                $this->error('Invalid database name. Only letters, numbers, and underscores are allowed.');
+                return self::FAILURE;
+            }
+
             // Connect without database name
             $dsn = "{$pdoDriver}:host={$config['DB_HOST']};port={$config['DB_PORT']}";
             $pdo = new \PDO($dsn, $config['DB_USERNAME'], $config['DB_PASSWORD']);

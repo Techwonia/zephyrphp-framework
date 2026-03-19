@@ -241,7 +241,27 @@ class Validator
     private function validateRegex(string $field, $value, array $params): bool
     {
         if (empty($value)) return true;
-        return preg_match($params[0] ?? '', $value);
+
+        $pattern = $params[0] ?? '';
+        if ($pattern === '') {
+            return false;
+        }
+
+        // Set a backtrack limit to mitigate ReDoS attacks
+        $previousLimit = ini_get('pcre.backtrack_limit');
+        ini_set('pcre.backtrack_limit', '10000');
+
+        $result = @preg_match($pattern, (string) $value);
+
+        // Restore previous limit
+        ini_set('pcre.backtrack_limit', $previousLimit);
+
+        // Check for PCRE errors (e.g., backtrack limit exhausted, invalid pattern)
+        if ($result === false || preg_last_error() !== PREG_NO_ERROR) {
+            return false;
+        }
+
+        return (bool) $result;
     }
 
     private function validateNullable(string $field, $value, array $params): bool

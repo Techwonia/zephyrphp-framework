@@ -9,7 +9,7 @@ namespace ZephyrPHP\Webhook;
  *
  * Features:
  * - HMAC-SHA256 signature verification (X-Webhook-Signature header)
- * - Retry with exponential backoff (3 attempts: 0s, 5s, 25s)
+ * - Retry with exponential backoff (3 attempts: 0s, 3s, 9s) within a 25s time budget
  * - Async dispatch option (fire-and-forget via non-blocking stream)
  * - Subscription management (create, delete, list)
  * - Topic-based filtering (mirrors event system: page.created, entry.updated, etc.)
@@ -17,21 +17,22 @@ namespace ZephyrPHP\Webhook;
  * Security:
  * - All payloads signed with per-subscription secret
  * - URL validation (must be HTTPS in production)
- * - Timeout on HTTP requests (10 seconds)
+ * - Timeout on HTTP requests (5 seconds)
  * - Max payload size limit (1MB)
  */
 class WebhookDispatcher
 {
     private static ?WebhookDispatcher $instance = null;
 
-    private const int MAX_RETRIES = 3;
-    private const int TIMEOUT_SECONDS = 10;
-    private const int MAX_PAYLOAD_SIZE = 1048576; // 1MB
+    private const MAX_RETRIES = 3;
+    private const TIMEOUT_SECONDS = 5;
+    private const MAX_PAYLOAD_SIZE = 1048576; // 1MB
+    private const TIME_BUDGET_SECONDS = 25;
 
     /**
      * Available webhook topics.
      */
-    public const array TOPICS = [
+    public const TOPICS = [
         'page.created',
         'page.updated',
         'page.deleted',
@@ -92,7 +93,7 @@ class WebhookDispatcher
                 'topic' => $topic,
                 'url' => $url,
                 'client_id' => $clientId,
-                'secret' => hash('sha256', $secret),
+                'secret' => $secret,
                 'format' => $format,
                 'is_active' => 1,
                 'failure_count' => 0,
@@ -196,11 +197,16 @@ class WebhookDispatcher
 
         $success = false;
         $lastError = '';
+        $startTime = microtime(true);
 
         for ($attempt = 0; $attempt < self::MAX_RETRIES; $attempt++) {
             if ($attempt > 0) {
-                // Exponential backoff: 5s, 25s
-                usleep((int) (pow(5, $attempt) * 1000000));
+                $elapsed = microtime(true) - $startTime;
+                if ($elapsed >= self::TIME_BUDGET_SECONDS) {
+                    break;
+                }
+                // Exponential backoff: 1s, 3s
+                usleep((int) (pow(3, $attempt) * 1000000));
             }
 
             $result = $this->httpPost($subscription['url'], $body, $headers);

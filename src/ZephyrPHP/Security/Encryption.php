@@ -59,7 +59,8 @@ class Encryption
         );
 
         if ($encrypted === false) {
-            throw new \RuntimeException('Encryption failed: ' . openssl_error_string());
+            error_log('Encryption failed: ' . openssl_error_string());
+            throw new \RuntimeException('Encryption failed. Check server logs for details.');
         }
 
         // Combine IV + Tag + Encrypted data
@@ -103,7 +104,8 @@ class Encryption
         );
 
         if ($decrypted === false) {
-            throw new \RuntimeException('Decryption failed: ' . openssl_error_string());
+            error_log('Decryption failed: ' . openssl_error_string());
+            throw new \RuntimeException('Decryption failed. Check server logs for details.');
         }
 
         return $decrypted;
@@ -279,8 +281,11 @@ class Encryption
 
         // Ensure key is correct length (32 bytes for AES-256)
         if (strlen($key) !== 32) {
-            // Hash the key to get correct length
-            $key = hash('sha256', $key, true);
+            throw new \InvalidArgumentException(
+                'Encryption key must be exactly 32 bytes for AES-256. '
+                . 'Current key is ' . strlen($key) . ' bytes. '
+                . 'Generate a valid key with: php craftsman key:generate'
+            );
         }
 
         return $key;

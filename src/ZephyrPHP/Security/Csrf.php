@@ -50,7 +50,14 @@ class Csrf
             return false;
         }
 
-        return hash_equals($_SESSION[self::TOKEN_KEY], $token);
+        $valid = hash_equals($_SESSION[self::TOKEN_KEY], $token);
+
+        // Rotate token after successful validation to prevent replay attacks
+        if ($valid) {
+            self::regenerate();
+        }
+
+        return $valid;
     }
 
     public static function regenerate(): string

@@ -75,10 +75,8 @@ class ApiAuthMiddleware implements MiddlewareInterface
             return $_SERVER['HTTP_X_TOKEN'];
         }
 
-        // Fallback: Check query parameter (not recommended for production)
-        if (!empty($_GET['api_token'])) {
-            return $_GET['api_token'];
-        }
+        // Do NOT accept tokens from query parameters ($_GET) as they are logged
+        // in server access logs, browser history, and referer headers.
 
         return null;
     }

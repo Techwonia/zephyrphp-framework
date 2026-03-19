@@ -177,6 +177,25 @@ class Route
     }
 
     /**
+     * Append middleware to an already-registered route.
+     *
+     * Called by RouteRegistrar::middleware() to update routes after registration.
+     *
+     * @internal
+     */
+    public static function appendRouteMiddleware(string $method, string $path, array $middleware): void
+    {
+        $method = strtoupper($method);
+
+        if (isset(self::$routes[$method][$path])) {
+            self::$routes[$method][$path]['middleware'] = array_merge(
+                self::$routes[$method][$path]['middleware'],
+                $middleware
+            );
+        }
+    }
+
+    /**
      * Parse callback from string syntax to callable
      * Supports: 'Controller@method', [Controller::class, 'method'], Closure
      */
@@ -597,7 +616,11 @@ class Route
 
         // HTTP method override
         if ($method === 'POST') {
+            $allowedMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
             $method = strtoupper($_POST['_method'] ?? $_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'] ?? 'POST');
+            if (!in_array($method, $allowedMethods, true)) {
+                $method = 'POST';
+            }
         }
 
         // Fire request.handling event
@@ -1037,8 +1060,12 @@ class RouteRegistrar
      */
     public function middleware($middleware): self
     {
-        // This would need to update the route's middleware
-        // For now, middleware should be passed when defining the route
+        $newMiddleware = is_array($middleware) ? $middleware : [$middleware];
+
+        foreach ($this->methods as $method) {
+            Route::appendRouteMiddleware($method, $this->path, $newMiddleware);
+        }
+
         return $this;
     }
 

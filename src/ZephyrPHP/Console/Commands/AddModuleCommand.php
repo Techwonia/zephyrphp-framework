@@ -27,12 +27,18 @@ class AddModuleCommand extends BaseCommand
         // Determine package name (use zephyrphp vendor prefix)
         $packageName = str_contains($moduleName, '/') ? $moduleName : "zephyrphp/{$moduleName}";
 
+        // Validate package name format to prevent command injection
+        if (!preg_match('/^[a-zA-Z0-9]([a-zA-Z0-9._-]*\/[a-zA-Z0-9]([a-zA-Z0-9._-]*))?$/', $packageName)) {
+            $this->error("Invalid package name format: {$packageName}");
+            return self::FAILURE;
+        }
+
         // Run composer require
         $this->line("Running: composer require {$packageName}");
         $this->line('');
 
         $result = 0;
-        passthru("composer require {$packageName}", $result);
+        passthru("composer require " . escapeshellarg($packageName), $result);
 
         if ($result !== 0) {
             $this->error("Failed to install module: {$moduleName}");

@@ -74,6 +74,10 @@ class OllamaProvider implements AiProviderInterface
 
     private function httpPost(string $url, array $payload): array
     {
+        // Only disable SSL verification for truly local hosts
+        $parsedHost = parse_url($this->host, PHP_URL_HOST);
+        $isLocal = in_array($parsedHost, ['localhost', '127.0.0.1', '::1'], true);
+
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
@@ -81,7 +85,7 @@ class OllamaProvider implements AiProviderInterface
             CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
             CURLOPT_POSTFIELDS => json_encode($payload),
             CURLOPT_TIMEOUT => 300, // Local models can be slow
-            CURLOPT_SSL_VERIFYPEER => false, // Local connection
+            CURLOPT_SSL_VERIFYPEER => !$isLocal,
         ]);
 
         $body = curl_exec($ch);

@@ -114,12 +114,33 @@ class Paginator implements \JsonSerializable
         return $this->url($this->currentPage + 1);
     }
 
+    /** @var array|null Allowlist of query parameter names to preserve in pagination URLs */
+    protected ?array $allowedQueryParams = null;
+
+    /**
+     * Set the allowed query parameter names for pagination URLs.
+     * Only these parameters (plus the page param) will be carried forward.
+     */
+    public function setAllowedQueryParams(array $params): self
+    {
+        $this->allowedQueryParams = $params;
+        return $this;
+    }
+
     public function url(int $page): string
     {
         $page = max(1, $page);
         $query = $_GET ?? [];
+
+        // If an explicit allowlist is set, filter to only those keys
+        if ($this->allowedQueryParams !== null) {
+            $allowed = array_flip($this->allowedQueryParams);
+            $query = array_intersect_key($query, $allowed);
+        }
+
         $query[$this->pageParam] = $page;
 
+        // http_build_query encodes values, preventing reflected XSS
         return $this->path . '?' . http_build_query($query);
     }
 

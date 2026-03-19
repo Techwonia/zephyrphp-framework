@@ -227,7 +227,17 @@ class Application
         $path = $_SERVER['REQUEST_URI'] ?? '/';
         $path = parse_url($path, PHP_URL_PATH) ?? '/';
 
-        if (str_starts_with($path, '/cms') || str_starts_with($path, '/login')) {
+        // Only bypass maintenance for exact CMS/login paths, not arbitrary routes
+        // that happen to start with these prefixes (e.g., /cms-public, /login-phishing)
+        $bypassPaths = ['/cms', '/login'];
+        $shouldBypass = false;
+        foreach ($bypassPaths as $bp) {
+            if ($path === $bp || str_starts_with($path, $bp . '/')) {
+                $shouldBypass = true;
+                break;
+            }
+        }
+        if ($shouldBypass) {
             return;
         }
 
@@ -262,7 +272,7 @@ class Application
 
     public function isDebug(): bool
     {
-        return filter_var($_ENV['APP_DEBUG'] ?? true, FILTER_VALIDATE_BOOLEAN);
+        return filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN);
     }
 
     public function getEnvironment(): string

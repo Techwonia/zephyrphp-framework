@@ -244,7 +244,23 @@ class RateLimiter
 
     private static function hitFile(string $key, int $decaySeconds): int
     {
-        $data = self::getFileData($key);
+        $file = self::getFilePath($key);
+        $dir = dirname($file);
+
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        // Use exclusive lock around the full read-increment-write cycle
+        $fh = fopen($file, 'c+');
+        if ($fh === false) {
+            return 0;
+        }
+
+        flock($fh, LOCK_EX);
+
+        $content = stream_get_contents($fh);
+        $data = $content ? (json_decode($content, true) ?? ['attempts' => 0, 'expires' => 0]) : ['attempts' => 0, 'expires' => 0];
         $now = time();
 
         // Reset if expired
@@ -253,7 +269,17 @@ class RateLimiter
         }
 
         $data['attempts']++;
-        self::saveFileData($key, $data);
+
+        // Rewrite file contents
+        ftruncate($fh, 0);
+        rewind($fh);
+        fwrite($fh, json_encode($data));
+        fflush($fh);
+
+        flock($fh, LOCK_UN);
+        fclose($fh);
+
+        self::$cache[$key] = $data;
 
         return $data['attempts'];
     }
@@ -321,7 +347,7 @@ class RateLimiter
     private static function getFilePath(string $key): string
     {
         $path = self::$storagePath ?: (defined('BASE_PATH') ? BASE_PATH . '/storage/rate_limits' : sys_get_temp_dir() . '/rate_limits');
-        $hash = md5($key);
+        $hash = hash('sha256', $key);
 
         return $path . '/' . substr($hash, 0, 2) . '/' . $hash . '.json';
     }

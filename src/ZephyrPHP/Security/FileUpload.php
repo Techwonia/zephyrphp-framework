@@ -107,10 +107,33 @@ class FileUpload
         }
 
         // Check for PHP code in file content (basic check)
-        $content = file_get_contents($file['tmp_name'], false, null, 0, 1024);
+        $content = file_get_contents($file['tmp_name'], false, null, 0, 8192);
         if (preg_match('/<\?php|<\?=|<script\s+language\s*=\s*["\']?php/i', $content)) {
             $this->errors[] = 'File contains potentially malicious content';
             return false;
+        }
+
+        // Extended SVG XSS checks: scan for script tags, event handlers, and JS URIs
+        if ($mimeType === 'image/svg+xml' || strtolower($extension) === 'svg') {
+            $svgContent = file_get_contents($file['tmp_name']);
+            $svgLower = strtolower($svgContent);
+            $xssPatterns = [
+                '/<script/i',                        // Script tags
+                '/javascript\s*:/i',                 // javascript: URIs
+                '/vbscript\s*:/i',                   // vbscript: URIs
+                '/data\s*:\s*text\/html/i',          // data: text/html URIs
+                '/\bon[a-z]+\s*=/i',                 // Event handlers (onclick=, onerror=, etc.)
+                '/xlink:href\s*=\s*["\']?\s*javascript/i',  // xlink:href with JS
+                '/set\s*=\s*["\']?\s*javascript/i',  // SVG set with JS
+                '/<foreignObject/i',                 // foreignObject can embed HTML
+            ];
+
+            foreach ($xssPatterns as $pattern) {
+                if (preg_match($pattern, $svgContent)) {
+                    $this->errors[] = 'SVG file contains potentially malicious content';
+                    return false;
+                }
+            }
         }
 
         return true;

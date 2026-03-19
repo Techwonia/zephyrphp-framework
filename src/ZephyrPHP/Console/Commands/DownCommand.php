@@ -60,7 +60,8 @@ class DownCommand extends BaseCommand
 
         $secret = $input->getOption('secret');
         if ($secret !== null) {
-            $data['secret'] = $secret;
+            // Store a bcrypt hash so the plaintext secret is not on disk
+            $data['secret'] = password_hash($secret, PASSWORD_BCRYPT);
         }
 
         $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);

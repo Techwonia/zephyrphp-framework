@@ -28,6 +28,12 @@ class DbCreateCommand extends BaseCommand
             return self::FAILURE;
         }
 
+        // Validate database name to prevent SQL injection
+        if ($driver !== 'sqlite' && !preg_match('/^[a-zA-Z0-9_]+$/', $database)) {
+            $this->error('Invalid database name. Only letters, numbers, and underscores are allowed.');
+            return self::FAILURE;
+        }
+
         if ($driver === 'sqlite') {
             $path = $this->basePath($database);
             $dir = dirname($path);

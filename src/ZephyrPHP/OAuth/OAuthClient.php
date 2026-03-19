@@ -72,7 +72,7 @@ class OAuthClient
         $client->name = $name;
         $client->clientId = bin2hex(random_bytes(16));
         $plainSecret = bin2hex(random_bytes(32));
-        $client->clientSecret = hash('sha256', $plainSecret);
+        $client->clientSecret = password_hash($plainSecret, PASSWORD_BCRYPT);
         $client->redirectUri = $redirectUri;
         $client->scopes = $scopes;
 
@@ -119,7 +119,7 @@ class OAuthClient
      */
     public function verifySecret(string $plainSecret): bool
     {
-        return hash_equals($this->clientSecret, hash('sha256', $plainSecret));
+        return password_verify($plainSecret, $this->clientSecret);
     }
 
     /**
@@ -130,8 +130,19 @@ class OAuthClient
         return in_array($scope, $this->scopes, true) || in_array('*', $this->scopes, true);
     }
 
-    // Transient property — only set on create()
-    public string $_plainSecret = '';
+    // Transient property — only set on create(), cleared after first read
+    private string $_plainSecret = '';
+
+    /**
+     * Get the plain-text secret (only available immediately after create()).
+     * The value is cleared after the first read to minimise exposure.
+     */
+    public function getPlainSecret(): string
+    {
+        $secret = $this->_plainSecret;
+        $this->_plainSecret = '';
+        return $secret;
+    }
 
     // Getters
     public function getId(): int { return $this->id; }

@@ -106,9 +106,13 @@ class CanMiddleware implements MiddlewareInterface
         ];
 
         foreach (array_filter($paramNames) as $param) {
-            // Check GET parameters
+            // Check GET parameters — validate as integer to prevent injection
             if (!empty($_GET[$param])) {
-                return $_GET[$param];
+                $id = $_GET[$param];
+                if (!ctype_digit((string) $id)) {
+                    return null;
+                }
+                return $id;
             }
 
             // Check route params if available in request
@@ -165,12 +169,14 @@ class CanMiddleware implements MiddlewareInterface
     protected function getErrorPage(int $code, string $message): string
     {
         $title = $code === 404 ? 'Not Found' : 'Forbidden';
+        $safeMessage = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+        $safeTitle = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
 
         return <<<HTML
 <!DOCTYPE html>
 <html>
 <head>
-    <title>{$code} {$title}</title>
+    <title>{$code} {$safeTitle}</title>
     <style>
         body { font-family: system-ui, sans-serif; text-align: center; padding: 50px; }
         h1 { font-size: 4rem; margin: 0; color: #e53e3e; }
@@ -179,7 +185,7 @@ class CanMiddleware implements MiddlewareInterface
 </head>
 <body>
     <h1>{$code}</h1>
-    <p>{$message}</p>
+    <p>{$safeMessage}</p>
 </body>
 </html>
 HTML;

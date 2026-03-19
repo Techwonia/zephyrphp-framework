@@ -124,12 +124,16 @@ class Logger implements LoggerInterface
     {
         $filename = $this->path . '/' . $this->channel . '-' . date('Y-m-d') . '.log';
 
+        // Sanitize newlines/control chars to prevent log injection/forging
+        $safeMessage = str_replace(["\r\n", "\r", "\n"], ' ', $record['message']);
+        $safeMessage = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', $safeMessage);
+
         $line = sprintf(
             "[%s] %s.%s: %s %s\n",
             $record['timestamp'],
             $record['channel'],
             $record['level'],
-            $record['message'],
+            $safeMessage,
             !empty($record['context']) ? json_encode($record['context']) : ''
         );
 

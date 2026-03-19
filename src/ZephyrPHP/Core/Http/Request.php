@@ -39,6 +39,21 @@ class Request
     private ?array $mergedInput = null;
     private array $routeParameters = [];
 
+    /** @var string[] List of trusted proxy IP addresses */
+    private static array $trustedProxies = [];
+
+    /**
+     * Set trusted proxy IP addresses
+     *
+     * Only requests from these IPs will have forwarded headers (X-Forwarded-For, etc.) honored.
+     *
+     * @param string[] $proxies Array of trusted proxy IP addresses
+     */
+    public static function setTrustedProxies(array $proxies): void
+    {
+        self::$trustedProxies = $proxies;
+    }
+
     public function __construct()
     {
         $this->get = $_GET;
@@ -628,13 +643,19 @@ class Request
     {
         $method = $this->server['REQUEST_METHOD'] ?? 'GET';
 
-        // Handle method override
+        // Handle method override (only from POST requests)
         if ($method === 'POST') {
             $override = $this->header('X-HTTP-METHOD-OVERRIDE')
                 ?? $this->input('_method');
 
             if ($override) {
-                $method = strtoupper($override);
+                $overrideUpper = strtoupper($override);
+                $allowed = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
+
+                // Only accept valid HTTP methods; ignore anything else
+                if (in_array($overrideUpper, $allowed, true)) {
+                    $method = $overrideUpper;
+                }
             }
         }
 
@@ -804,10 +825,15 @@ class Request
             return true;
         }
 
-        // Check forwarded proto (behind proxy)
-        $forwardedProto = $this->header('X-FORWARDED-PROTO');
-        if ($forwardedProto === 'https') {
-            return true;
+        // Only trust X-Forwarded-Proto if the request comes from a trusted proxy
+        if (!empty(self::$trustedProxies)) {
+            $remoteAddr = $this->server['REMOTE_ADDR'] ?? '';
+            if (in_array($remoteAddr, self::$trustedProxies, true)) {
+                $forwardedProto = $this->header('X-FORWARDED-PROTO');
+                if ($forwardedProto === 'https') {
+                    return true;
+                }
+            }
         }
 
         return ($this->server['SERVER_PORT'] ?? 80) == 443;
@@ -1099,22 +1125,31 @@ class Request
      */
     public function ip(): string
     {
-        $headers = [
-            'HTTP_CF_CONNECTING_IP',     // Cloudflare
-            'HTTP_X_REAL_IP',            // Nginx proxy
-            'HTTP_CLIENT_IP',
-            'HTTP_X_FORWARDED_FOR',
-            'HTTP_X_FORWARDED',
-            'REMOTE_ADDR'
-        ];
+        $remoteAddr = $this->server['REMOTE_ADDR'] ?? '0.0.0.0';
 
-        foreach ($headers as $header) {
-            if (!empty($this->server[$header])) {
-                $ip = trim(explode(',', $this->server[$header])[0]);
-                if (filter_var($ip, FILTER_VALIDATE_IP)) {
-                    return $ip;
+        // Only trust forwarded headers if REMOTE_ADDR is a configured trusted proxy
+        if (!empty(self::$trustedProxies) && in_array($remoteAddr, self::$trustedProxies, true)) {
+            $forwardedHeaders = [
+                'HTTP_CF_CONNECTING_IP',     // Cloudflare
+                'HTTP_X_REAL_IP',            // Nginx proxy
+                'HTTP_CLIENT_IP',
+                'HTTP_X_FORWARDED_FOR',
+                'HTTP_X_FORWARDED',
+            ];
+
+            foreach ($forwardedHeaders as $header) {
+                if (!empty($this->server[$header])) {
+                    $ip = trim(explode(',', $this->server[$header])[0]);
+                    if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                        return $ip;
+                    }
                 }
             }
+        }
+
+        // Fall back to REMOTE_ADDR only
+        if (filter_var($remoteAddr, FILTER_VALIDATE_IP)) {
+            return $remoteAddr;
         }
 
         return '0.0.0.0';
@@ -1197,10 +1232,13 @@ class Request
 
     /**
      * Flash current input to session
+     *
+     * Automatically excludes sensitive fields (passwords, tokens, etc.)
      */
     public function flash(): void
     {
-        $_SESSION['_old_input'] = $this->all();
+        $except = ['password', 'password_confirmation', 'current_password', 'credit_card', 'cvv', 'ssn', 'token', 'secret'];
+        $_SESSION['_old_input'] = array_diff_key($this->all(), array_flip($except));
     }
 
     /**

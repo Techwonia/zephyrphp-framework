@@ -17,7 +17,7 @@ class Session
             'lifetime' => (int) ($_ENV['SESSION_LIFETIME'] ?? 120) * 60,
             'path' => '/',
             'domain' => null,
-            'secure' => filter_var($_ENV['SESSION_SECURE_COOKIE'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            'secure' => filter_var($_ENV['SESSION_SECURE_COOKIE'] ?? (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'), FILTER_VALIDATE_BOOLEAN),
             'httponly' => true,
             'samesite' => 'Lax',
         ], $config);
@@ -253,6 +253,11 @@ class Session
     {
         if ($this->started) {
             throw new \RuntimeException('Cannot change session ID after session has started');
+        }
+
+        // Validate session ID format to prevent session fixation with arbitrary IDs
+        if (!preg_match('/^[a-zA-Z0-9,-]{22,256}$/', $id)) {
+            throw new \InvalidArgumentException('Invalid session ID format');
         }
 
         session_id($id);

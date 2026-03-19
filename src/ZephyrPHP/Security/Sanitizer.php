@@ -84,7 +84,14 @@ class Sanitizer
                     'alphanumeric' => self::alphanumeric($value),
                     'slug' => self::slug($value),
                     'filename' => self::filename($value),
-                    'raw' => $value,
+                    'none' => (function() use ($value) {
+                        trigger_error(
+                            "Sanitizer rule 'none' skips sanitization — use with extreme caution. "
+                            . "The 'raw' alias has been removed for security.",
+                            E_USER_DEPRECATED
+                        );
+                        return $value;
+                    })(),
                     default => self::string($value),
                 };
             }

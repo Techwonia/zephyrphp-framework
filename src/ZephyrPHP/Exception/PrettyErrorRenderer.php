@@ -251,16 +251,21 @@ HTML;
         }
         $html .= '</table></div></div>';
 
-        // Cookies
+        // Cookies — mask session and auth cookie values to prevent exposure
         $html .= '<div class="section"><div class="section-header">Cookies</div><div class="section-body"><table class="kv-table">';
         if (!empty($_COOKIE)) {
+            $sensitiveCookies = ['zephyr_session', 'PHPSESSID', 'auth_remember_token', 'maintenance_bypass', 'csrf_token', '_token'];
             foreach ($_COOKIE as $key => $value) {
-                $key = htmlspecialchars((string) $key, ENT_QUOTES, 'UTF-8');
-                $value = htmlspecialchars(mb_substr((string) $value, 0, 100), ENT_QUOTES, 'UTF-8');
-                if (strlen((string) ($_COOKIE[$key] ?? '')) > 100) {
-                    $value .= '...';
+                $safeKey = htmlspecialchars((string) $key, ENT_QUOTES, 'UTF-8');
+                if (in_array(strtolower($key), array_map('strtolower', $sensitiveCookies), true) || str_contains(strtolower($key), 'session') || str_contains(strtolower($key), 'token')) {
+                    $safeValue = '********';
+                } else {
+                    $safeValue = htmlspecialchars(mb_substr((string) $value, 0, 100), ENT_QUOTES, 'UTF-8');
+                    if (strlen((string) $value) > 100) {
+                        $safeValue .= '...';
+                    }
                 }
-                $html .= "<tr><td>{$key}</td><td>{$value}</td></tr>";
+                $html .= "<tr><td>{$safeKey}</td><td>{$safeValue}</td></tr>";
             }
         } else {
             $html .= '<tr><td colspan="2" class="empty-note">No cookies</td></tr>';

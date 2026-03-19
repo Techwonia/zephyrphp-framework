@@ -142,6 +142,15 @@ if (!function_exists('old')) {
 if (!function_exists('redirect')) {
     function redirect(string $url, int $statusCode = 302): never
     {
+        // Validate URL scheme — block javascript:, data:, protocol-relative, etc.
+        $trimmed = trim($url);
+        if (preg_match('#^//[^/]#', $trimmed)) {
+            throw new \InvalidArgumentException('Protocol-relative redirect URLs are not allowed.');
+        }
+        $scheme = parse_url($trimmed, PHP_URL_SCHEME);
+        if ($scheme !== null && !in_array(strtolower($scheme), ['http', 'https'], true)) {
+            throw new \InvalidArgumentException("Redirect URL scheme '{$scheme}' is not allowed.");
+        }
         (new Response())->redirect($url, $statusCode);
     }
 }
@@ -338,9 +347,18 @@ if (!function_exists('abort_unless')) {
 if (!function_exists('dd')) {
     function dd(...$vars): never
     {
+        // Disabled in production to prevent information leakage
+        $env = $_ENV['ENV'] ?? $_ENV['APP_ENV'] ?? 'dev';
+        if (in_array($env, ['production', 'prod'], true)) {
+            exit(1);
+        }
+
         foreach ($vars as $var) {
-            echo '<pre style="background:#1e1e1e;color:#d4d4d4;padding:16px;margin:8px;border-radius:4px;font-family:Consolas,monospace;font-size:13px;overflow:auto;">';
+            ob_start();
             var_dump($var);
+            $output = ob_get_clean();
+            echo '<pre style="background:#1e1e1e;color:#d4d4d4;padding:16px;margin:8px;border-radius:4px;font-family:Consolas,monospace;font-size:13px;overflow:auto;">';
+            echo htmlspecialchars($output, ENT_QUOTES, 'UTF-8');
             echo '</pre>';
         }
         exit(1);
@@ -350,9 +368,18 @@ if (!function_exists('dd')) {
 if (!function_exists('dump')) {
     function dump(...$vars): void
     {
+        // Disabled in production to prevent information leakage
+        $env = $_ENV['ENV'] ?? $_ENV['APP_ENV'] ?? 'dev';
+        if (in_array($env, ['production', 'prod'], true)) {
+            return;
+        }
+
         foreach ($vars as $var) {
-            echo '<pre style="background:#1e1e1e;color:#d4d4d4;padding:16px;margin:8px;border-radius:4px;font-family:Consolas,monospace;font-size:13px;overflow:auto;">';
+            ob_start();
             var_dump($var);
+            $output = ob_get_clean();
+            echo '<pre style="background:#1e1e1e;color:#d4d4d4;padding:16px;margin:8px;border-radius:4px;font-family:Consolas,monospace;font-size:13px;overflow:auto;">';
+            echo htmlspecialchars($output, ENT_QUOTES, 'UTF-8');
             echo '</pre>';
         }
     }

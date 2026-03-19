@@ -26,18 +26,20 @@ class MaintenanceMiddleware implements MiddlewareInterface
 
         $data = $this->readDownFile($downFile);
 
-        // Check bypass secret via cookie
-        $secret = $data['secret'] ?? null;
-        if ($secret !== null && isset($_COOKIE['maintenance_bypass'])) {
-            if (hash_equals(hash('sha256', $secret), $_COOKIE['maintenance_bypass'])) {
+        // The secret is stored as a bcrypt hash in the down file.
+        $secretHash = $data['secret'] ?? null;
+
+        // Check bypass secret via cookie (cookie holds an HMAC of the plaintext)
+        if ($secretHash !== null && isset($_COOKIE['maintenance_bypass'])) {
+            if (hash_equals($secretHash, $_COOKIE['maintenance_bypass'])) {
                 return $next($request);
             }
         }
 
-        // Check bypass secret via URL query parameter — set cookie and redirect
-        if ($secret !== null && isset($_GET['bypass']) && $_GET['bypass'] === $secret) {
-            $cookieValue = hash('sha256', $secret);
-            setcookie('maintenance_bypass', $cookieValue, [
+        // Check bypass secret via URL query parameter — verify against bcrypt hash
+        if ($secretHash !== null && isset($_GET['bypass']) && password_verify($_GET['bypass'], $secretHash)) {
+            // Store the hash itself in the cookie for subsequent requests
+            setcookie('maintenance_bypass', $secretHash, [
                 'expires' => time() + 86400 * 30,
                 'path' => '/',
                 'httponly' => true,
@@ -85,22 +87,19 @@ class MaintenanceMiddleware implements MiddlewareInterface
 
     /**
      * Get the client IP address.
+     *
+     * Uses REMOTE_ADDR directly to avoid IP spoofing via proxy headers.
+     * If the framework Request class is available, delegates to its
+     * trusted-proxy-aware ip() method instead.
      */
     protected function getClientIp(): string
     {
-        // Check trusted proxy headers
-        $headers = ['HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP', 'HTTP_CLIENT_IP'];
-
-        foreach ($headers as $header) {
-            if (!empty($_SERVER[$header])) {
-                $ips = explode(',', $_SERVER[$header]);
-                $ip = trim($ips[0]);
-                if (filter_var($ip, FILTER_VALIDATE_IP)) {
-                    return $ip;
-                }
-            }
+        // Prefer the framework Request which respects trusted proxy configuration
+        if (class_exists(\ZephyrPHP\Core\Http\Request::class)) {
+            return \ZephyrPHP\Core\Http\Request::getInstance()->ip();
         }
 
+        // Fallback: use REMOTE_ADDR only (not spoofable)
         return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
     }
 

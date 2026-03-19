@@ -51,7 +51,7 @@ class Headers
         // Basic security headers
         self::set('X-Content-Type-Options', 'nosniff');
         self::set('X-Frame-Options', 'SAMEORIGIN');
-        self::set('X-XSS-Protection', '1; mode=block');
+        self::set('X-XSS-Protection', '0');
         self::set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
         // Permissions Policy
@@ -89,6 +89,14 @@ class Headers
      */
     private static function applyCSP(bool $isProduction): void
     {
+        // SAFEGUARD: Never use the permissive dev CSP (unsafe-inline/unsafe-eval)
+        // unless APP_ENV is explicitly NOT 'production'. If APP_ENV is missing or
+        // ambiguous, default to the strict production policy.
+        $appEnv = $_ENV['ENV'] ?? $_ENV['APP_ENV'] ?? '';
+        if ($appEnv === 'production' || $appEnv === 'prod') {
+            $isProduction = true;
+        }
+
         $csp = $isProduction ? self::getProductionCSP() : self::getDevelopmentCSP();
 
         // Add report URI if configured
@@ -426,17 +434,22 @@ class Headers
     }
 
     public static function corsHeaders(
-        array $allowedOrigins = ['*'],
+        array $allowedOrigins = [],
         array $allowedMethods = ['GET', 'POST', 'OPTIONS'],
         array $allowedHeaders = ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
         bool $allowCredentials = false,
         int $maxAge = 86400
     ): void {
-        $origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
+        // If no origins configured, do not set any CORS headers
+        if (empty($allowedOrigins)) {
+            return;
+        }
 
-        if (in_array('*', $allowedOrigins)) {
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+        if (in_array('*', $allowedOrigins, true)) {
             self::set('Access-Control-Allow-Origin', '*');
-        } elseif (in_array($origin, $allowedOrigins)) {
+        } elseif ($origin !== '' && in_array($origin, $allowedOrigins, true)) {
             self::set('Access-Control-Allow-Origin', $origin);
             self::set('Vary', 'Origin');
         }

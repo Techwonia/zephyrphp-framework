@@ -24,14 +24,14 @@ namespace ZephyrPHP\OAuth;
  */
 class OAuthManager
 {
-    private const int AUTH_CODE_TTL = 600;           // 10 minutes
-    private const int ACCESS_TOKEN_TTL = 3600;       // 1 hour
-    private const int REFRESH_TOKEN_TTL = 2592000;   // 30 days
+    private const AUTH_CODE_TTL = 600;           // 10 minutes
+    private const ACCESS_TOKEN_TTL = 3600;       // 1 hour
+    private const REFRESH_TOKEN_TTL = 2592000;   // 30 days
 
     /**
      * Available OAuth scopes.
      */
-    public const array SCOPES = [
+    public const SCOPES = [
         'read_pages'       => 'Read pages and page types',
         'write_pages'      => 'Create and update pages',
         'read_collections' => 'Read collections and entries',

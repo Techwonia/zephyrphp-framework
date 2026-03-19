@@ -526,8 +526,12 @@ class View
             return function_exists('config') ? config($key, $default) : $default;
         });
 
-        // Environment helper
+        // Environment helper (restricted to safe, non-secret env vars only)
         $this->addFunction('env', function (string $key, $default = null) {
+            $allowedKeys = ['APP_NAME', 'APP_URL', 'APP_ENV', 'APP_DEBUG', 'APP_LOCALE'];
+            if (!in_array($key, $allowedKeys, true)) {
+                return $default;
+            }
             return env($key, $default);
         });
 
@@ -641,10 +645,16 @@ class View
     {
         $cacheDir = BASE_PATH . '/storage/compiled';
         if (is_dir($cacheDir)) {
-            $files = glob($cacheDir . '/*');
-            foreach ($files as $file) {
-                if (is_file($file)) {
-                    unlink($file);
+            $iterator = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($cacheDir, \FilesystemIterator::SKIP_DOTS),
+                \RecursiveIteratorIterator::CHILD_FIRST
+            );
+
+            foreach ($iterator as $item) {
+                if ($item->isDir()) {
+                    @rmdir($item->getPathname());
+                } else {
+                    @unlink($item->getPathname());
                 }
             }
         }

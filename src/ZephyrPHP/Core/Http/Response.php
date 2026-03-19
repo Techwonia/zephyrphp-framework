@@ -372,6 +372,11 @@ class Response
      */
     public static function jsonp($data, string $callback, int $statusCode = 200): self
     {
+        // Validate callback name to prevent XSS injection
+        if (!preg_match('/^[a-zA-Z_$][a-zA-Z0-9_$.]*$/', $callback)) {
+            throw new \InvalidArgumentException('Invalid JSONP callback name.');
+        }
+
         $response = new self();
         $response->setStatusCode($statusCode);
         $response->setHeader('Content-Type', 'application/javascript; charset=utf-8');
@@ -668,10 +673,27 @@ class Response
 
     /**
      * Redirect back to previous page
+     *
+     * Only redirects to same-origin referer to prevent open redirect attacks.
      */
     public function back(string $fallback = '/'): never
     {
-        $url = $_SERVER['HTTP_REFERER'] ?? $fallback;
+        $url = $fallback;
+        $referer = $_SERVER['HTTP_REFERER'] ?? null;
+
+        if ($referer !== null) {
+            $refererHost = parse_url($referer, PHP_URL_HOST);
+            $currentHost = $_SERVER['HTTP_HOST'] ?? '';
+
+            // Strip port from HTTP_HOST for comparison
+            $currentHost = strtolower(explode(':', $currentHost)[0]);
+            $refererHost = strtolower((string) $refererHost);
+
+            if ($refererHost === $currentHost) {
+                $url = $referer;
+            }
+        }
+
         $this->redirect($url);
     }
 
@@ -685,10 +707,40 @@ class Response
     }
 
     /**
+     * Validate a URL for safe redirection.
+     *
+     * Blocks javascript:, data:, vbscript:, and protocol-relative URLs (//evil.com).
+     * Only http and https schemes are allowed.
+     *
+     * @throws \InvalidArgumentException If the URL uses a disallowed scheme.
+     */
+    private static function validateRedirectUrl(string $url): void
+    {
+        $url = trim($url);
+
+        // Block protocol-relative URLs (//evil.com)
+        if (preg_match('#^//[^/]#', $url)) {
+            throw new \InvalidArgumentException('Protocol-relative redirect URLs are not allowed.');
+        }
+
+        // Parse the scheme; only allow http(s) or relative paths (no scheme)
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+        if ($scheme !== null) {
+            $scheme = strtolower($scheme);
+            if (!in_array($scheme, ['http', 'https'], true)) {
+                throw new \InvalidArgumentException("Redirect URL scheme '{$scheme}' is not allowed.");
+            }
+        }
+    }
+
+    /**
      * Redirect away (external URL)
+     *
+     * Only allows http/https URLs. Blocks javascript:, data:, and protocol-relative URLs.
      */
     public static function away(string $url, int $statusCode = 302): self
     {
+        self::validateRedirectUrl($url);
         return self::redirectTo($url, $statusCode);
     }
 
@@ -697,10 +749,42 @@ class Response
     // ========================================================================
 
     /**
+     * Validate that a file path is within an allowed directory.
+     *
+     * Prevents path-traversal attacks by resolving the real path
+     * and checking it falls within BASE_PATH (or a custom allowed root).
+     *
+     * @throws \RuntimeException If the path is outside allowed directories.
+     */
+    private function validateFilePath(string $filePath): string
+    {
+        // Reject obvious traversal patterns early
+        if (str_contains($filePath, '..')) {
+            self::forbidden('Access denied: invalid file path.')->sendAndExit();
+        }
+
+        $realPath = realpath($filePath);
+        if ($realPath === false) {
+            self::notFound('File not found')->sendAndExit();
+        }
+
+        $allowedRoot = defined('BASE_PATH') ? realpath(BASE_PATH) : null;
+        if ($allowedRoot !== false && $allowedRoot !== null) {
+            if (!str_starts_with($realPath, $allowedRoot . DIRECTORY_SEPARATOR) && $realPath !== $allowedRoot) {
+                self::forbidden('Access denied: file is outside the allowed directory.')->sendAndExit();
+            }
+        }
+
+        return $realPath;
+    }
+
+    /**
      * Download file
      */
     public function download(string $filePath, ?string $name = null, array $headers = []): never
     {
+        $filePath = $this->validateFilePath($filePath);
+
         if (!file_exists($filePath)) {
             self::notFound('File not found')->sendAndExit();
         }
@@ -751,6 +835,8 @@ class Response
      */
     public function file(string $filePath, ?string $name = null): never
     {
+        $filePath = $this->validateFilePath($filePath);
+
         if (!file_exists($filePath)) {
             self::notFound('File not found')->sendAndExit();
         }
@@ -808,10 +894,15 @@ class Response
         int $minutes = 0,
         ?string $path = '/',
         ?string $domain = null,
-        bool $secure = false,
+        ?bool $secure = null,
         bool $httpOnly = true,
         string $sameSite = 'Lax'
     ): self {
+        // Auto-detect HTTPS when $secure is not explicitly provided
+        if ($secure === null) {
+            $secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+        }
+
         $this->cookies[] = [
             'name' => $name,
             'value' => $value,
@@ -836,7 +927,7 @@ class Response
         string $value,
         ?string $path = '/',
         ?string $domain = null,
-        bool $secure = false,
+        ?bool $secure = null,
         bool $httpOnly = true
     ): self {
         return $this->cookie($name, $value, 60 * 24 * 365 * 5, $path, $domain, $secure, $httpOnly);

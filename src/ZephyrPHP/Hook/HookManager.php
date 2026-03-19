@@ -27,7 +27,7 @@ class HookManager
     /**
      * Maximum recursion depth for hooks to prevent infinite loops.
      */
-    private const int MAX_DEPTH = 10;
+    private const MAX_DEPTH = 10;
 
     /**
      * @var array<string, array<int, array{callback: callable, priority: int}>>

@@ -18,10 +18,19 @@ use ZephyrPHP\Middleware\MiddlewareInterface;
  *       ->middleware([OAuthMiddleware::class]);
  *
  * Access scopes in controller:
- *   $scopes = $_REQUEST['_oauth_scopes'] ?? [];
+ *   $scopes = OAuthMiddleware::$resolvedScopes;
  */
 class OAuthMiddleware implements MiddlewareInterface
 {
+    /** @var array Resolved OAuth scopes for the current request */
+    public static array $resolvedScopes = [];
+
+    /** @var int|null Authenticated OAuth user ID */
+    public static ?int $resolvedUserId = null;
+
+    /** @var string|null Authenticated OAuth client ID */
+    public static ?string $resolvedClientId = null;
+
     public function handle($request, callable $next)
     {
         $token = $this->extractBearerToken();
@@ -42,10 +51,10 @@ class OAuthMiddleware implements MiddlewareInterface
             \ZephyrPHP\Auth\Auth::onceUsingId($payload['user_id']);
         }
 
-        // Store scopes on request for controllers to check
-        $_REQUEST['_oauth_user_id'] = $payload['user_id'];
-        $_REQUEST['_oauth_client_id'] = $payload['client_id'];
-        $_REQUEST['_oauth_scopes'] = $payload['scopes'];
+        // Store OAuth context on static properties (avoid mutating $_REQUEST)
+        self::$resolvedUserId = $payload['user_id'];
+        self::$resolvedClientId = $payload['client_id'];
+        self::$resolvedScopes = $payload['scopes'];
 
         return $next($request);
     }
@@ -55,7 +64,7 @@ class OAuthMiddleware implements MiddlewareInterface
      */
     public static function hasScope(string $scope): bool
     {
-        $scopes = $_REQUEST['_oauth_scopes'] ?? [];
+        $scopes = self::$resolvedScopes;
         return in_array($scope, $scopes, true) || in_array('*', $scopes, true);
     }
 

@@ -28,6 +28,19 @@ class ServeCommand extends BaseCommand
 
         $host = $input->getArgument('host');
         $port = $input->getArgument('port');
+
+        // Validate host format (hostname or IP only)
+        if (!preg_match('/^[a-zA-Z0-9.\-:]+$/', $host)) {
+            $this->error('Invalid host format.');
+            return self::FAILURE;
+        }
+
+        // Validate port is numeric and in valid range
+        if (!ctype_digit((string) $port) || (int) $port < 1 || (int) $port > 65535) {
+            $this->error('Port must be a number between 1 and 65535.');
+            return self::FAILURE;
+        }
+
         $publicPath = $this->basePath('public');
 
         // Create a router script so the built-in server passes
@@ -61,7 +74,12 @@ ROUTER;
         $this->line('Press Ctrl+C to stop the server');
         $this->line('');
 
-        passthru("php -S {$host}:{$port} -t \"{$publicPath}\" \"{$routerPath}\"");
+        $safeHost = escapeshellarg($host);
+        $safePort = escapeshellarg($port);
+        $safePublicPath = escapeshellarg($publicPath);
+        $safeRouterPath = escapeshellarg($routerPath);
+
+        passthru("php -S {$safeHost}:{$safePort} -t {$safePublicPath} {$safeRouterPath}");
 
         return self::SUCCESS;
     }

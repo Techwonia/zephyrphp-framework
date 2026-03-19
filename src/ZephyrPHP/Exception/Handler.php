@@ -31,7 +31,15 @@ class Handler
 
     public function __construct()
     {
-        $this->debug = filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $isDebug = filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $appEnv = $_ENV['ENV'] ?? $_ENV['APP_ENV'] ?? '';
+
+        // Safety: never enable debug mode in production even if APP_DEBUG is misconfigured
+        if (in_array($appEnv, ['production', 'prod'], true)) {
+            $isDebug = false;
+        }
+
+        $this->debug = $isDebug;
         $this->logPath = defined('BASE_PATH') ? BASE_PATH . '/storage/logs' : null;
         $this->loadExceptionConfig();
     }

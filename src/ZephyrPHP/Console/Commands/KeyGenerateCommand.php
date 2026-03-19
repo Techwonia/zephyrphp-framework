@@ -23,16 +23,19 @@ class KeyGenerateCommand extends BaseCommand
         $envPath = $this->basePath('.env');
         $envExamplePath = $this->basePath('.env.example');
 
+        // Only display the first 8 characters of the key to avoid leaking it in logs
+        $maskedKey = substr($key, 0, 15) . '...';
+
         if (file_exists($envPath)) {
             $this->updateEnvFile($envPath, $key);
-            $this->success("Application key set: {$key}");
+            $this->success("Application key set: {$maskedKey}");
         } elseif (file_exists($envExamplePath)) {
             copy($envExamplePath, $envPath);
             $this->updateEnvFile($envPath, $key);
-            $this->success("Created .env file and set application key: {$key}");
+            $this->success("Created .env file and set application key: {$maskedKey}");
         } else {
             file_put_contents($envPath, "APP_KEY={$key}\n");
-            $this->success("Created .env file with application key: {$key}");
+            $this->success("Created .env file with application key: {$maskedKey}");
         }
 
         return self::SUCCESS;

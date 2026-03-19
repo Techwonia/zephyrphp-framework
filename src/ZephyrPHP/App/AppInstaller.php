@@ -33,10 +33,10 @@ use ZephyrPHP\Hook\HookManager;
  */
 class AppInstaller
 {
-    private const int MAX_FILE_SIZE = 10 * 1024 * 1024;      // 10MB per file
-    private const int MAX_TOTAL_SIZE = 50 * 1024 * 1024;     // 50MB total
+    private const MAX_FILE_SIZE = 10 * 1024 * 1024;      // 10MB per file
+    private const MAX_TOTAL_SIZE = 50 * 1024 * 1024;     // 50MB total
 
-    private const array ALLOWED_EXTENSIONS = [
+    private const ALLOWED_EXTENSIONS = [
         'twig', 'json', 'css', 'js', 'map',
         'woff', 'woff2', 'ttf', 'otf', 'eot',
         'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico',
@@ -46,12 +46,12 @@ class AppInstaller
     /**
      * Directories where PHP files are permitted.
      */
-    private const array PHP_ALLOWED_DIRS = ['src/', 'migrations/', 'routes/'];
+    private const PHP_ALLOWED_DIRS = ['src/', 'migrations/', 'routes/'];
 
     /**
      * Required fields in app.json.
      */
-    private const array REQUIRED_FIELDS = ['name', 'main'];
+    private const REQUIRED_FIELDS = ['name', 'main'];
 
     private AppManager $appManager;
 

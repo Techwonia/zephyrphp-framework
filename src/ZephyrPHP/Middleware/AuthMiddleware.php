@@ -79,8 +79,14 @@ class AuthMiddleware implements MiddlewareInterface
      */
     protected function redirectToLogin($request)
     {
-        // Store intended URL for redirect after login
+        // Store intended URL for redirect after login (sanitized)
         $intendedUrl = $_SERVER['REQUEST_URI'] ?? '/';
+
+        // Validate: must start with a single '/' and must not start with '//' (open redirect)
+        if (!str_starts_with($intendedUrl, '/') || str_starts_with($intendedUrl, '//')) {
+            $intendedUrl = '/';
+        }
+
         $session = \ZephyrPHP\Session\Session::getInstance();
         $session->set('url_intended', $intendedUrl);
 

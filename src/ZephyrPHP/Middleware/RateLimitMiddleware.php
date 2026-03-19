@@ -97,30 +97,56 @@ class RateLimitMiddleware implements MiddlewareInterface
         return implode(':', $parts);
     }
 
+    /** @var string[] Trusted proxy IP addresses */
+    protected static array $trustedProxies = [];
+
+    /**
+     * Set trusted proxy IP addresses.
+     *
+     * Only requests from these IPs will have forwarded headers honored.
+     *
+     * @param string[] $proxies
+     */
+    public static function setTrustedProxies(array $proxies): void
+    {
+        self::$trustedProxies = $proxies;
+    }
+
     /**
      * Get client IP address
+     *
+     * Only trusts proxy headers (X-Forwarded-For, X-Real-IP, CF-Connecting-IP)
+     * when REMOTE_ADDR is in the trusted proxies list.
      */
     protected function getClientIp(): string
     {
-        // Check for proxied IP
-        $headers = [
-            'HTTP_CF_CONNECTING_IP',     // Cloudflare
-            'HTTP_X_FORWARDED_FOR',      // Standard proxy
-            'HTTP_X_REAL_IP',            // Nginx
-            'REMOTE_ADDR',               // Direct connection
-        ];
+        $remoteAddr = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
 
-        foreach ($headers as $header) {
-            if (!empty($_SERVER[$header])) {
-                $ip = $_SERVER[$header];
-                // X-Forwarded-For can contain multiple IPs
-                if (str_contains($ip, ',')) {
-                    $ip = trim(explode(',', $ip)[0]);
-                }
-                if (filter_var($ip, FILTER_VALIDATE_IP)) {
-                    return $ip;
+        // Only read proxy headers if the direct connection is from a trusted proxy
+        if (!empty(self::$trustedProxies) && in_array($remoteAddr, self::$trustedProxies, true)) {
+            $proxyHeaders = [
+                'HTTP_CF_CONNECTING_IP',     // Cloudflare
+                'HTTP_X_FORWARDED_FOR',      // Standard proxy
+                'HTTP_X_REAL_IP',            // Nginx
+            ];
+
+            foreach ($proxyHeaders as $header) {
+                if (!empty($_SERVER[$header])) {
+                    $ip = $_SERVER[$header];
+                    // X-Forwarded-For can contain multiple IPs — use the leftmost (client)
+                    if (str_contains($ip, ',')) {
+                        $ip = trim(explode(',', $ip)[0]);
+                    }
+                    if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                        return $ip;
+                    }
                 }
             }
+        }
+
+        // Fall back to direct connection IP
+        if (filter_var($remoteAddr, FILTER_VALIDATE_IP)) {
+            return $remoteAddr;
         }
 
         return '127.0.0.1';

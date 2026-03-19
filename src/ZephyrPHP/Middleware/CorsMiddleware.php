@@ -173,9 +173,11 @@ class CorsMiddleware implements MiddlewareInterface
             }
 
             // Support wildcard subdomains: *.example.com
-            if (str_contains($allowed, '*')) {
-                $regex = str_replace('\*', '[a-zA-Z0-9\-]+', preg_quote($allowed, '#'));
-                if (preg_match('#^' . $regex . '$#', $origin)) {
+            // Only allow wildcard as the first label (subdomain), not in domain/TLD
+            if (str_starts_with($allowed, '*.') && substr_count($allowed, '*') === 1) {
+                $domain = substr($allowed, 2); // e.g., ".example.com"
+                $quotedDomain = preg_quote($domain, '#');
+                if (preg_match('#^https?://[a-zA-Z0-9\-]+' . $quotedDomain . '$#', $origin)) {
                     return true;
                 }
             }
