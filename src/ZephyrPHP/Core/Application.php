@@ -38,6 +38,9 @@ class Application
 
     protected function bootstrap(): void
     {
+        // Auto-generate APP_KEY if missing
+        $this->ensureAppKey();
+
         // Initialize container first
         $this->container = Container::getInstance();
         $this->registerCoreBindings();
@@ -134,6 +137,32 @@ class Application
         $this->container->singleton(HookManager::class, fn() => HookManager::getInstance());
         $this->container->singleton('events', fn() => EventDispatcher::getInstance());
         $this->container->singleton('hooks', fn() => HookManager::getInstance());
+    }
+
+    /**
+     * Auto-generate APP_KEY if not set, and persist to .env
+     */
+    protected function ensureAppKey(): void
+    {
+        if (!empty($_ENV['APP_KEY'])) {
+            return;
+        }
+
+        $key = 'base64:' . base64_encode(random_bytes(32));
+        $_ENV['APP_KEY'] = $key;
+        putenv("APP_KEY={$key}");
+
+        // Persist to .env file if it exists
+        $envPath = defined('BASE_PATH') ? BASE_PATH . '/.env' : null;
+        if ($envPath && file_exists($envPath) && is_writable($envPath)) {
+            $content = file_get_contents($envPath);
+            if (str_contains($content, 'APP_KEY=')) {
+                $content = preg_replace('/^APP_KEY=.*$/m', "APP_KEY={$key}", $content);
+            } else {
+                $content .= "\nAPP_KEY={$key}\n";
+            }
+            file_put_contents($envPath, $content, LOCK_EX);
+        }
     }
 
     protected function configureErrorHandling(): void

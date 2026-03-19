@@ -143,7 +143,7 @@ class ModuleManager
     public function enable(string $name): self
     {
         if (!isset($this->available[$name])) {
-            throw new ModuleNotFoundException("Module '{$name}' is not available. Install it first with: php craftsman add {$name}");
+            throw new ModuleNotFoundException("Module '{$name}' is not available. Install it with: composer require zephyrphp/{$name}");
         }
 
         // Check and enable dependencies first
@@ -360,7 +360,7 @@ class ModuleManager
         if (!$this->isLoaded($name)) {
             throw new ModuleNotEnabledException(
                 "Module '{$name}' is required but not enabled. " .
-                "Enable it in config/modules.php or run: php craftsman module:enable {$name}"
+                "Enable it in config/modules.php"
             );
         }
 

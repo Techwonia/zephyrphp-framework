@@ -270,7 +270,7 @@ class Encryption
 
         if (empty($key)) {
             throw new \RuntimeException(
-                'No encryption key set. Generate one with: php craftsman key:generate'
+                'No encryption key set. Set APP_KEY in your .env file or re-run the setup wizard.'
             );
         }
 
@@ -284,7 +284,7 @@ class Encryption
             throw new \InvalidArgumentException(
                 'Encryption key must be exactly 32 bytes for AES-256. '
                 . 'Current key is ' . strlen($key) . ' bytes. '
-                . 'Generate a valid key with: php craftsman key:generate'
+                . 'Set a valid APP_KEY in your .env file or re-run the setup wizard.'
             );
         }
 
