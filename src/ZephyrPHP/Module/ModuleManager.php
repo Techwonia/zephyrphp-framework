@@ -80,10 +80,6 @@ class ModuleManager
                 'provider' => \ZephyrPHP\Database\DatabaseServiceProvider::class,
                 'dependencies' => [],
             ],
-            'api' => [
-                'provider' => \ZephyrPHP\Api\ApiServiceProvider::class,
-                'dependencies' => [],
-            ],
             'auth' => [
                 'provider' => \ZephyrPHP\Auth\AuthServiceProvider::class,
                 'dependencies' => ['session'],
