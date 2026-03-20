@@ -42,12 +42,13 @@ class Installer
             self::dumpAutoload($projectDir, $io);
         }
 
-        // Generate APP_KEY
-        self::generateAppKey($projectDir);
-        $io->success('Application key generated.');
-
         $io->write('');
-        $io->write('Setup complete! Run: php craftsman serve');
+        $io->success('Setup complete!');
+        $io->write('');
+        $io->write('  Next steps:');
+        $io->write('    1. php craftsman serve');
+        $io->write('    2. Open http://localhost:8000');
+        $io->write('    3. Complete the setup wizard');
         $io->write('');
     }
 
@@ -203,24 +204,6 @@ class Installer
         }
     }
 
-    private static function generateAppKey(string $dir): void
-    {
-        $key = 'base64:' . base64_encode(random_bytes(32));
-
-        $envFile = $dir . '/.env';
-        $envExample = $dir . '/.env.example';
-
-        // Copy .env.example to .env if not exists
-        if (!file_exists($envFile) && file_exists($envExample)) {
-            copy($envExample, $envFile);
-        }
-
-        if (file_exists($envFile)) {
-            $content = file_get_contents($envFile);
-            $content = preg_replace('/^APP_KEY=.*$/m', 'APP_KEY=' . $key, $content);
-            file_put_contents($envFile, $content);
-        }
-    }
 }
 
 /**

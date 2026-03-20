@@ -102,12 +102,16 @@ class Application
         // Load module configuration
         $modulesConfig = Config::get('modules', []);
 
-        // If no config exists, enable only core modules by default
+        // If no config exists, enable all available modules by default
         if (empty($modulesConfig)) {
             $modulesConfig = [
                 'session' => true,
                 'validation' => true,
                 'view' => true,
+                'database' => true,
+                'auth' => true,
+                'authorization' => true,
+                'cms' => true,
             ];
         }
 

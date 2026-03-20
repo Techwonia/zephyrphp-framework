@@ -1,6 +1,6 @@
 {
     "name": "zephyrphp/framework",
-    "description": "ZephyrPHP - A lightweight, fast & secure PHP framework. Light as a breeze, fast as the wind.",
+    "description": "ZephyrPHP - An open-source, GUI-first CMS platform for building modern websites.",
     "type": "library",
     "license": "MIT",
     "keywords": [
