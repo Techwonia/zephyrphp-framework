@@ -262,7 +262,8 @@ class Application
 
         // Bypass maintenance for admin panel and auth routes so admins can bring the app back up
         $adminPath = '/' . trim(preg_replace('/[^a-zA-Z0-9_-]/', '', $_ENV['ADMIN_PATH'] ?? 'admin'), '/');
-        $bypassPaths = [$adminPath, '/zephyrphp/auth'];
+        $authBasePath = dirname(Config::get('auth.routes.login', '/zephyrphp/auth/login'));
+        $bypassPaths = [$adminPath, $authBasePath];
         $shouldBypass = false;
         foreach ($bypassPaths as $bp) {
             if ($path === $bp || str_starts_with($path, $bp . '/')) {

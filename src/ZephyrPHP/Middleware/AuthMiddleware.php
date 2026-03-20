@@ -24,7 +24,7 @@ use ZephyrPHP\Auth\Auth;
 class AuthMiddleware implements MiddlewareInterface
 {
     /** @var string Redirect URL for unauthenticated users */
-    protected string $redirectTo = '/zephyrphp/auth/login';
+    protected string $redirectTo = '';
 
     /**
      * Handle the middleware
@@ -90,7 +90,11 @@ class AuthMiddleware implements MiddlewareInterface
         $session = \ZephyrPHP\Session\Session::getInstance();
         $session->set('url_intended', $intendedUrl);
 
-        header('Location: ' . $this->redirectTo);
+        $loginUrl = $this->redirectTo;
+        if (empty($loginUrl)) {
+            $loginUrl = \ZephyrPHP\Config\Config::get('auth.routes.login', '/zephyrphp/auth/login');
+        }
+        header('Location: ' . $loginUrl);
         exit;
     }
 

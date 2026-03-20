@@ -47,6 +47,37 @@ class Route
     private static ?string $currentDomain = null;
     private static array $modelBindings = [];
     private static array $patterns = [];
+    private static ?string $controllerNamespace = null;
+
+    private static function detectControllerNamespace(): string
+    {
+        if (self::$controllerNamespace !== null) {
+            return self::$controllerNamespace;
+        }
+
+        $basePath = defined('BASE_PATH') ? BASE_PATH : getcwd();
+        $composerFile = $basePath . '/composer.json';
+
+        if (file_exists($composerFile)) {
+            $composer = json_decode(file_get_contents($composerFile), true);
+            $psr4 = $composer['autoload']['psr-4'] ?? [];
+            foreach ($psr4 as $namespace => $path) {
+                $controllersDir = $basePath . '/' . rtrim($path, '/') . '/Controllers';
+                if (is_dir($controllersDir)) {
+                    self::$controllerNamespace = rtrim($namespace, '\\') . '\\Controllers\\';
+                    return self::$controllerNamespace;
+                }
+            }
+            // Use first PSR-4 namespace as base
+            foreach ($psr4 as $namespace => $path) {
+                self::$controllerNamespace = rtrim($namespace, '\\') . '\\Controllers\\';
+                return self::$controllerNamespace;
+            }
+        }
+
+        self::$controllerNamespace = '';
+        return self::$controllerNamespace;
+    }
 
     // ========================================================================
     // ROUTE DEFINITION METHODS
@@ -204,9 +235,12 @@ class Route
         if (is_string($callback) && str_contains($callback, '@')) {
             [$controller, $method] = explode('@', $callback, 2);
 
-            // Support namespaced controllers
+            // Support namespaced controllers via auto-detection from composer.json
             if (!class_exists($controller)) {
-                $controller = "App\\Controllers\\{$controller}";
+                $controllerNs = self::detectControllerNamespace();
+                if ($controllerNs) {
+                    $controller = $controllerNs . $controller;
+                }
             }
 
             if (!class_exists($controller)) {
