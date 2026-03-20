@@ -87,7 +87,7 @@ class Application
         $this->events->dispatch(new AppBooted());
         $this->hooks->doAction('app.booted');
 
-        $this->logger->info('Application booted', [
+        $this->logger->debug('Application booted', [
             'environment' => $this->getEnvironment(),
             'debug' => $this->isDebug(),
             'modules' => $this->modules->getEnabled(),
