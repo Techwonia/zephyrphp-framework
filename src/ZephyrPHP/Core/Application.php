@@ -260,9 +260,9 @@ class Application
         $path = $_SERVER['REQUEST_URI'] ?? '/';
         $path = parse_url($path, PHP_URL_PATH) ?? '/';
 
-        // Only bypass maintenance for exact CMS/login paths, not arbitrary routes
-        // that happen to start with these prefixes (e.g., /cms-public, /login-phishing)
-        $bypassPaths = ['/cms', '/login'];
+        // Bypass maintenance for admin panel and auth routes so admins can bring the app back up
+        $adminPath = '/' . trim(preg_replace('/[^a-zA-Z0-9_-]/', '', $_ENV['ADMIN_PATH'] ?? 'admin'), '/');
+        $bypassPaths = [$adminPath, '/zephyrphp/auth'];
         $shouldBypass = false;
         foreach ($bypassPaths as $bp) {
             if ($path === $bp || str_starts_with($path, $bp . '/')) {
