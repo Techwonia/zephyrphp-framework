@@ -26,7 +26,7 @@ This package is installed automatically with the starter:
 composer create-project zephyrphp/starter mysite
 ```
 
-> **Note:** ZephyrPHP is a standalone CMS platform. These packages are not compatible with Laravel, Symfony, or other PHP frameworks.
+> **Note:** ZephyrPHP is a standalone CMS platform. These packages are designed exclusively for ZephyrPHP and are not compatible with other PHP frameworks.
 
 ## Documentation
 
