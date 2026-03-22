@@ -328,6 +328,9 @@ class Headers
 
     public static function set(string $name, string $value): void
     {
+        // Strip CRLF to prevent header injection
+        $name = str_replace(["\r", "\n", "\0"], '', $name);
+        $value = str_replace(["\r", "\n", "\0"], '', $value);
         self::$headers[$name] = $value;
     }
 

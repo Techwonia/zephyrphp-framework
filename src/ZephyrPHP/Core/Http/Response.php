@@ -650,6 +650,7 @@ class Response
      */
     public static function redirectTo(string $url, int $statusCode = 302): self
     {
+        self::validateRedirectUrl($url);
         $response = new self('', $statusCode);
         $response->setHeader('Location', $url);
         return $response;
@@ -718,8 +719,11 @@ class Response
     {
         $url = trim($url);
 
-        // Block protocol-relative URLs (//evil.com)
-        if (preg_match('#^//[^/]#', $url)) {
+        // Decode percent-encoded characters to catch bypass attempts like %2f%2f
+        $decoded = rawurldecode($url);
+
+        // Block protocol-relative URLs (//evil.com) including encoded variants
+        if (preg_match('#^//[^/]#', $url) || preg_match('#^//[^/]#', $decoded)) {
             throw new \InvalidArgumentException('Protocol-relative redirect URLs are not allowed.');
         }
 
@@ -729,6 +733,15 @@ class Response
             $scheme = strtolower($scheme);
             if (!in_array($scheme, ['http', 'https'], true)) {
                 throw new \InvalidArgumentException("Redirect URL scheme '{$scheme}' is not allowed.");
+            }
+        }
+
+        // Also check decoded URL for scheme bypass (e.g. JaVaScRiPt:)
+        $decodedScheme = parse_url($decoded, PHP_URL_SCHEME);
+        if ($decodedScheme !== null) {
+            $decodedScheme = strtolower($decodedScheme);
+            if (!in_array($decodedScheme, ['http', 'https'], true)) {
+                throw new \InvalidArgumentException("Redirect URL scheme '{$decodedScheme}' is not allowed.");
             }
         }
     }
@@ -793,7 +806,8 @@ class Response
         $mimeType = mime_content_type($filePath) ?: 'application/octet-stream';
 
         $this->setHeader('Content-Type', $mimeType);
-        $this->setHeader('Content-Disposition', 'attachment; filename="' . addslashes($name) . '"');
+        $safeName = str_replace(["\r", "\n", "\0", '"'], ['', '', '', '\\"'], $name);
+        $this->setHeader('Content-Disposition', 'attachment; filename="' . $safeName . '"');
         $this->setHeader('Content-Length', (string) filesize($filePath));
         $this->setHeader('Content-Transfer-Encoding', 'binary');
         $this->setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
@@ -815,7 +829,8 @@ class Response
     public function streamDownload(callable $callback, string $name, array $headers = []): never
     {
         $this->setHeader('Content-Type', 'application/octet-stream');
-        $this->setHeader('Content-Disposition', 'attachment; filename="' . addslashes($name) . '"');
+        $safeName = str_replace(["\r", "\n", "\0", '"'], ['', '', '', '\\"'], $name);
+        $this->setHeader('Content-Disposition', 'attachment; filename="' . $safeName . '"');
         $this->setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 
         foreach ($headers as $key => $value) {
@@ -1069,7 +1084,7 @@ class Response
     {
         $this->setHeader('X-Content-Type-Options', 'nosniff');
         $this->setHeader('X-Frame-Options', 'SAMEORIGIN');
-        $this->setHeader('X-XSS-Protection', '1; mode=block');
+        $this->setHeader('X-XSS-Protection', '0');
         $this->setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
         return $this;
     }

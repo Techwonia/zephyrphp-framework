@@ -156,16 +156,24 @@ class Application
         $_ENV['APP_KEY'] = $key;
         putenv("APP_KEY={$key}");
 
-        // Persist to .env file if it exists
+        // Persist to .env file if it exists (atomic with file locking)
         $envPath = defined('BASE_PATH') ? BASE_PATH . '/.env' : null;
         if ($envPath && file_exists($envPath) && is_writable($envPath)) {
-            $content = file_get_contents($envPath);
-            if (str_contains($content, 'APP_KEY=')) {
-                $content = preg_replace('/^APP_KEY=.*$/m', "APP_KEY={$key}", $content);
-            } else {
-                $content .= "\nAPP_KEY={$key}\n";
+            $fp = fopen($envPath, 'c+');
+            if ($fp !== false && flock($fp, LOCK_EX)) {
+                $content = stream_get_contents($fp);
+                if (str_contains($content, 'APP_KEY=')) {
+                    $content = preg_replace('/^APP_KEY=.*$/m', "APP_KEY={$key}", $content);
+                } else {
+                    $content .= "\nAPP_KEY={$key}\n";
+                }
+                ftruncate($fp, 0);
+                rewind($fp);
+                fwrite($fp, $content);
+                fflush($fp);
+                flock($fp, LOCK_UN);
+                fclose($fp);
             }
-            file_put_contents($envPath, $content, LOCK_EX);
         }
     }
 
