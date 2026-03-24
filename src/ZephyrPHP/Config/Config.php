@@ -32,6 +32,12 @@ class Config
         }
 
         self::$loaded = true;
+
+        // Auto-cache in production so subsequent requests skip glob + require
+        $env = $_ENV['ENV'] ?? $_ENV['APP_ENV'] ?? 'dev';
+        if ($env === 'production') {
+            self::cache();
+        }
     }
 
     public static function get(string $key, $default = null)

@@ -58,8 +58,8 @@ class View
 
         $this->loader = new FilesystemLoader($templateDir);
         $this->twig = new Environment($this->loader, [
-            'cache' => $isProduction ? $cacheDir : false,
-            'auto_reload' => !$isProduction,
+            'cache' => $cacheDir,
+            'auto_reload' => true,
             'debug' => !$isProduction,
             'strict_variables' => $isProduction,
             'autoescape' => 'html',
