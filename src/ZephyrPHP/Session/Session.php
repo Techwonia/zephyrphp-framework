@@ -64,11 +64,16 @@ class Session
 
     protected function regenerateIfNeeded(): void
     {
+        // Skip regeneration for AJAX/API requests to prevent session loss
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) || !empty($_SERVER['HTTP_X_CSRF_TOKEN'])) {
+            return;
+        }
+
         $lastRegenerate = $this->get('_last_regenerate', 0);
-        $regenerateInterval = 300;
+        $regenerateInterval = 1800; // 30 minutes (was 5 min — too aggressive)
 
         if (time() - $lastRegenerate > $regenerateInterval) {
-            $this->regenerate();
+            $this->regenerate(false); // Keep old session for grace period
         }
     }
 
