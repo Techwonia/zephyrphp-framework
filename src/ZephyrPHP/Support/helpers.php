@@ -169,6 +169,17 @@ if (!function_exists('route')) {
     }
 }
 
+if (!function_exists('app_url')) {
+    /**
+     * Get the application URL (from APP_URL env, with trailing slash stripped).
+     */
+    function app_url(string $path = ''): string
+    {
+        $base = rtrim($_ENV['APP_URL'] ?? '', '/');
+        return $path ? $base . '/' . ltrim($path, '/') : $base;
+    }
+}
+
 if (!function_exists('url')) {
     function url(string $path = ''): string
     {
