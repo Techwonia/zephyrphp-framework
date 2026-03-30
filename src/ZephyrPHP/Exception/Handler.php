@@ -653,8 +653,17 @@ class Handler
             }
             Flash::old($_POST ?? []);
 
+            $referer = $_SERVER['HTTP_REFERER'] ?? '/';
+            // Only allow same-origin redirects to prevent open redirect attacks
+            if (!str_starts_with($referer, '/') || str_starts_with($referer, '//')) {
+                $appUrl = rtrim($_ENV['APP_URL'] ?? '', '/');
+                if ($appUrl && !str_starts_with($referer, $appUrl)) {
+                    $referer = '/';
+                }
+            }
+
             http_response_code(303);
-            header('Location: ' . $_SERVER['HTTP_REFERER']);
+            header('Location: ' . $referer);
             return;
         }
 
