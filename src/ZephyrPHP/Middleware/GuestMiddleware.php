@@ -23,7 +23,8 @@ class GuestMiddleware implements MiddlewareInterface
 
     public function __construct()
     {
-        $this->redirectTo = '/' . ltrim($_ENV['ADMIN_PATH'] ?? 'admin', '/');
+        $adminPath = preg_replace('/[^a-zA-Z0-9_-]/', '', $_ENV['ADMIN_PATH'] ?? 'admin');
+        $this->redirectTo = '/' . trim($adminPath, '/');
     }
 
     /**

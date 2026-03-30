@@ -30,6 +30,8 @@ namespace ZephyrPHP\Security;
  */
 class RateLimiter
 {
+    private const RATE_LIMITS_DIR = '/storage/rate_limits';
+
     /** @var string Storage driver */
     private static string $driver = 'file';
 
@@ -346,7 +348,7 @@ class RateLimiter
 
     private static function getFilePath(string $key): string
     {
-        $path = self::$storagePath ?: (defined('BASE_PATH') ? BASE_PATH . '/storage/rate_limits' : sys_get_temp_dir() . '/rate_limits');
+        $path = self::$storagePath ?: (defined('BASE_PATH') ? BASE_PATH . self::RATE_LIMITS_DIR : sys_get_temp_dir() . '/rate_limits');
         $hash = hash('sha256', $key);
 
         return $path . '/' . substr($hash, 0, 2) . '/' . $hash . '.json';
@@ -560,7 +562,7 @@ class RateLimiter
 
     private static function cleanupFiles(): void
     {
-        $path = self::$storagePath ?: (defined('BASE_PATH') ? BASE_PATH . '/storage/rate_limits' : sys_get_temp_dir() . '/rate_limits');
+        $path = self::$storagePath ?: (defined('BASE_PATH') ? BASE_PATH . self::RATE_LIMITS_DIR : sys_get_temp_dir() . '/rate_limits');
 
         if (!is_dir($path)) {
             return;

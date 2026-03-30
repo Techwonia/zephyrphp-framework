@@ -32,7 +32,7 @@ class Handler
     public function __construct()
     {
         $isDebug = filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        $appEnv = $_ENV['ENV'] ?? $_ENV['APP_ENV'] ?? '';
+        $appEnv = $_ENV['ENV'] ?? $_ENV['APP_ENV'] ?? 'dev';
 
         // Safety: never enable debug mode in production even if APP_DEBUG is misconfigured
         if (in_array($appEnv, ['production', 'prod'], true)) {
@@ -1112,7 +1112,7 @@ HTML;
 
     protected function getEnvironment(): string
     {
-        return $_ENV['ENV'] ?? 'production';
+        return $_ENV['ENV'] ?? 'dev';
     }
 
     public function setDebug(bool $debug): self

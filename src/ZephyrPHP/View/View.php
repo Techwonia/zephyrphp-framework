@@ -31,6 +31,8 @@ use Closure;
  */
 class View
 {
+    private const CACHE_DIR = '/storage/compiled';
+
     private static ?View $instance = null;
     protected Environment $twig;
     protected FilesystemLoader $loader;
@@ -54,7 +56,7 @@ class View
     {
         $viewsPath = $_ENV["VIEWS_PATH"] ?? 'pages';
         $templateDir = BASE_PATH . '/' . ltrim($viewsPath, '/');
-        $cacheDir = BASE_PATH . '/storage/compiled';
+        $cacheDir = BASE_PATH . self::CACHE_DIR;
         $isProduction = ($_ENV['ENV'] ?? 'dev') === 'production';
 
         $this->loader = new FilesystemLoader($templateDir);
@@ -644,7 +646,7 @@ class View
      */
     public function clearCompiled(): void
     {
-        $cacheDir = BASE_PATH . '/storage/compiled';
+        $cacheDir = BASE_PATH . self::CACHE_DIR;
         if (is_dir($cacheDir)) {
             $iterator = new \RecursiveIteratorIterator(
                 new \RecursiveDirectoryIterator($cacheDir, \FilesystemIterator::SKIP_DOTS),
