@@ -1007,9 +1007,9 @@ HTML;
     protected function renderErrorTemplate(int $statusCode, string $title, string $message): bool
     {
         try {
-            $viewsPath = ($_ENV['VIEWS_PATH'] ?? '/pages');
+            $viewsPath = $_ENV['VIEWS_PATH'] ?? 'pages';
             $basePath = defined('BASE_PATH') ? BASE_PATH : getcwd();
-            $templateDir = $basePath . $viewsPath;
+            $templateDir = $basePath . '/' . ltrim($viewsPath, '/');
 
             // Check for errors/{statusCode}.twig
             $templateFile = $templateDir . '/errors/' . $statusCode . '.twig';

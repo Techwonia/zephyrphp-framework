@@ -157,9 +157,9 @@ HTML;
     protected function renderCustomTemplate(array $data): bool
     {
         try {
-            $viewsPath = $_ENV['VIEWS_PATH'] ?? '/pages';
+            $viewsPath = $_ENV['VIEWS_PATH'] ?? 'pages';
             $basePath = defined('BASE_PATH') ? BASE_PATH : getcwd();
-            $templateFile = $basePath . $viewsPath . '/errors/503.twig';
+            $templateFile = $basePath . '/' . ltrim($viewsPath, '/') . '/errors/503.twig';
 
             if (!file_exists($templateFile)) {
                 return false;

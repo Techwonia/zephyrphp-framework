@@ -52,7 +52,8 @@ class View
 
     public function __construct()
     {
-        $templateDir = BASE_PATH . ($_ENV["VIEWS_PATH"] ?? '/pages');
+        $viewsPath = $_ENV["VIEWS_PATH"] ?? 'pages';
+        $templateDir = BASE_PATH . '/' . ltrim($viewsPath, '/');
         $cacheDir = BASE_PATH . '/storage/compiled';
         $isProduction = ($_ENV['ENV'] ?? 'dev') === 'production';
 
