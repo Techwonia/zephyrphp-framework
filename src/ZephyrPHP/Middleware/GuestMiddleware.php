@@ -23,7 +23,7 @@ class GuestMiddleware implements MiddlewareInterface
 
     public function __construct()
     {
-        $this->redirectTo = $_ENV['AUTH_HOME'] ?? '/dashboard';
+        $this->redirectTo = '/' . ltrim($_ENV['ADMIN_PATH'] ?? 'admin', '/');
     }
 
     /**
