@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace ZephyrPHP\Middleware;
 
-use ZephyrPHP\Auth\Gate;
-use ZephyrPHP\Auth\AuthorizationException;
+use ZephyrPHP\Authorization\Gate;
+use ZephyrPHP\Authorization\AuthorizationException;
 
 /**
  * Authorization Middleware
