@@ -229,8 +229,6 @@ class Application
         $routesPath = BASE_PATH . '/routes/web.php';
         if (file_exists($routesPath)) {
             require $routesPath;
-        } else {
-            throw new \RuntimeException("Routes file not found: $routesPath");
         }
 
         $apiRoutesPath = BASE_PATH . '/routes/api.php';
