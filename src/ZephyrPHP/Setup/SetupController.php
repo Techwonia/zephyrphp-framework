@@ -635,18 +635,37 @@ class SetupController extends Controller
             @file_put_contents($flagDir . '/.tables-installed', '2', LOCK_EX);
 
             // ── Seed theme if none exist ──
+            // Walk themes/{slug}/ and accept either the Phase-1 manifest
+            // (theme.blueprint.json) or the legacy theme.json. First match
+            // wins and is marked live.
             $stmt = $pdo->query("SELECT COUNT(*) FROM `cms_themes`");
             if ((int) $stmt->fetchColumn() === 0) {
                 $themesBase = BASE_PATH . '/themes';
                 if (is_dir($themesBase)) {
-                    foreach (glob($themesBase . '/*/theme.json') as $themeFile) {
-                        $slug = basename(dirname($themeFile));
-                        $config = json_decode(file_get_contents($themeFile), true);
-                        $name = $config['name'] ?? ucfirst($slug);
-                        $safeSlug = preg_replace('/[^a-z0-9_-]/', '', strtolower($slug));
-                        $stmt = $pdo->prepare("INSERT INTO `cms_themes` (`name`, `slug`, `status`, `createdAt`, `updatedAt`) VALUES (?, ?, 'live', NOW(), NOW())");
-                        $stmt->execute([$name, $safeSlug]);
-                        break;
+                    $seeded = false;
+                    foreach (scandir($themesBase) as $entry) {
+                        if ($seeded) break;
+                        if ($entry === '.' || $entry === '..') continue;
+                        $dir = $themesBase . '/' . $entry;
+                        if (!is_dir($dir)) continue;
+
+                        $manifest = null;
+                        foreach (['theme.blueprint.json', 'theme.json'] as $candidate) {
+                            if (file_exists($dir . '/' . $candidate)) {
+                                $manifest = $dir . '/' . $candidate;
+                                break;
+                            }
+                        }
+                        if (!$manifest) continue;
+
+                        $config = json_decode((string) file_get_contents($manifest), true);
+                        $name = $config['name'] ?? ucfirst($entry);
+                        $safeSlug = preg_replace('/[^a-z0-9_-]/', '', strtolower($entry));
+                        if ($safeSlug === '') continue;
+
+                        $insert = $pdo->prepare("INSERT INTO `cms_themes` (`name`, `slug`, `status`, `createdAt`, `updatedAt`) VALUES (?, ?, 'live', NOW(), NOW())");
+                        $insert->execute([$name, $safeSlug]);
+                        $seeded = true;
                     }
                 }
             }
