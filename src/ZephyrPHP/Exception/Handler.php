@@ -1015,61 +1015,35 @@ HTML;
      *
      * Lookup order (first hit wins):
      *   1. Active theme override:  @theme/errors/{code}.twig
-     *   2. Legacy host-local file:  {VIEWS_PATH}/errors/{code}.twig
-     *   3. CMS-shipped default:     @errors/{code}.twig
+     *   2. CMS-shipped default:    @errors/{code}.twig
      *
-     * Any failure falls through to the next candidate, and finally to the
-     * built-in framework error page.
+     * Any failure falls through to the built-in framework error page.
      */
     protected function renderErrorTemplate(int $statusCode, string $title, string $message): bool
     {
+        if (!function_exists('view')) {
+            return false;
+        }
+
         $vars = [
             'code' => $statusCode,
             'title' => $title,
             'message' => $message,
         ];
 
-        // Prefer the View system (Twig namespaces work only through it)
-        if (function_exists('view')) {
-            $candidates = [
-                '@theme/errors/' . $statusCode,
-                'errors/' . $statusCode,
-                '@errors/' . $statusCode,
-            ];
-
-            foreach ($candidates as $template) {
-                try {
-                    $html = view($template, $vars);
-                    if ($html !== null && $html !== '') {
-                        echo $html;
-                        return true;
-                    }
-                } catch (\Throwable $e) {
-                    // Template missing or render failed — try the next candidate
+        foreach (['@theme/errors/' . $statusCode, '@errors/' . $statusCode] as $template) {
+            try {
+                $html = view($template, $vars);
+                if ($html !== null && $html !== '') {
+                    echo $html;
+                    return true;
                 }
+            } catch (\Throwable $e) {
+                // Template missing or render failed — try the next candidate
             }
-            return false;
         }
 
-        // Minimal fallback if the View system isn't bootstrapped yet:
-        // check for a host-local errors/{code}.twig file and render via bare Twig.
-        try {
-            $viewsPath = $_ENV['VIEWS_PATH'] ?? 'pages';
-            $basePath = defined('BASE_PATH') ? BASE_PATH : getcwd();
-            $templateDir = $basePath . '/' . ltrim($viewsPath, '/');
-            $templateFile = $templateDir . '/errors/' . $statusCode . '.twig';
-
-            if (!file_exists($templateFile)) {
-                return false;
-            }
-
-            $loader = new \Twig\Loader\FilesystemLoader($templateDir);
-            $twig = new \Twig\Environment($loader);
-            echo $twig->render('errors/' . $statusCode . '.twig', $vars);
-            return true;
-        } catch (\Throwable $e) {
-            return false;
-        }
+        return false;
     }
 
     protected function getCodeSnippet(string $file, int $line, int $padding = 8): string

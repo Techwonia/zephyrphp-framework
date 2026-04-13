@@ -157,21 +157,23 @@ HTML;
     protected function renderCustomTemplate(array $data): bool
     {
         try {
-            $viewsPath = $_ENV['VIEWS_PATH'] ?? 'pages';
-            $basePath = defined('BASE_PATH') ? BASE_PATH : getcwd();
-            $templateFile = $basePath . '/' . ltrim($viewsPath, '/') . '/errors/503.twig';
-
-            if (!file_exists($templateFile)) {
-                return false;
-            }
-
+            // Prefer the @errors namespace (CMS-shipped default or theme override)
             if (function_exists('view')) {
-                echo view('errors/503', [
-                    'code' => 503,
-                    'title' => 'Under Maintenance',
-                    'message' => $data['message'] ?? 'We are currently performing maintenance.',
-                ]);
-                return true;
+                foreach (['@theme/errors/503', 'errors/503', '@errors/503'] as $tpl) {
+                    try {
+                        $html = view($tpl, [
+                            'code' => 503,
+                            'title' => 'Under Maintenance',
+                            'message' => $data['message'] ?? 'We are currently performing maintenance.',
+                        ]);
+                        if ($html !== null && $html !== '') {
+                            echo $html;
+                            return true;
+                        }
+                    } catch (\Throwable $ignore) {
+                        // Try next candidate
+                    }
+                }
             }
         } catch (\Throwable $e) {
             // Ignore template errors

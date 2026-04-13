@@ -637,7 +637,7 @@ class SetupController extends Controller
             // ── Seed theme if none exist ──
             $stmt = $pdo->query("SELECT COUNT(*) FROM `cms_themes`");
             if ((int) $stmt->fetchColumn() === 0) {
-                $themesBase = BASE_PATH . '/' . ltrim(env('VIEWS_PATH', '/pages'), '/') . '/themes';
+                $themesBase = BASE_PATH . '/themes';
                 if (is_dir($themesBase)) {
                     foreach (glob($themesBase . '/*/theme.json') as $themeFile) {
                         $slug = basename(dirname($themeFile));

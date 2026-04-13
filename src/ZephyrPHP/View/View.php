@@ -54,8 +54,12 @@ class View
 
     public function __construct()
     {
-        $viewsPath = $_ENV["VIEWS_PATH"] ?? 'pages';
-        $templateDir = BASE_PATH . '/' . ltrim($viewsPath, '/');
+        // Default Twig base path — only matters for unnamespaced renders,
+        // which modern ZephyrPHP avoids (all renders go through @theme, @cms,
+        // @auth, @errors, @setup namespaces). Pointing at BASE_PATH/themes
+        // keeps loose template lookups semantically close to where any such
+        // files would realistically live.
+        $templateDir = BASE_PATH . '/themes';
         $cacheDir = BASE_PATH . self::CACHE_DIR;
         $isProduction = ($_ENV['ENV'] ?? 'dev') === 'production';
 
