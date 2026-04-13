@@ -18,6 +18,7 @@ use ZephyrPHP\Event\Events\AppBooting;
 use ZephyrPHP\Event\Events\AppBooted;
 use ZephyrPHP\Event\Events\AppTerminating;
 use ZephyrPHP\Hook\HookManager;
+use ZephyrPHP\Setup\SetupBootstrapper;
 
 class Application
 {
@@ -73,6 +74,9 @@ class Application
         Headers::apply();
 
         $this->configureAssets();
+
+        // First-run setup wizard — no-op once storage/.installed exists
+        SetupBootstrapper::register();
 
         $this->registerRoutes();
 
